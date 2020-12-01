@@ -60,14 +60,20 @@ class HyperGraphDB {
   }
 
   async _getIndexNode (id) {
-    let decoded = await this._fetchNodeAt(-1) // get head
-    let addr = id >> BUCKET_WIDTH
-    let slot = addr & BUCKET_MASK
-    while (decoded.id !== addr) {
-      if (decoded.children.length > slot) {
+    const prefix = id >> BUCKET_WIDTH
+    let decoded
+    if (id === 0 && await this.feed.length() < 3) {
+      decoded = this._createIndexNode(id)
+    } else {
+      decoded = await this._fetchNodeAt(-1) // get head
+    }
+    let addr = prefix
+    let slot = (addr & BUCKET_MASK) - 1
+    while (decoded.id !== prefix) {
+      if (decoded.children.length > slot && decoded.children[slot] !== 0) {
         decoded = await this._fetchNodeAt(decoded.children[slot])
       } else {
-        decoded = this._createIndexNode(addr)
+        return this._createIndexNode(prefix)
       }
       slot = addr & BUCKET_MASK
       addr = addr >> BUCKET_WIDTH
@@ -77,7 +83,9 @@ class HyperGraphDB {
 
   async _fetchNodeAt (index) {
     const head = await (index >= 0 ? this.feed.get(index) : this.feed.head())
-    return Messages.IndexNode.decode(head)
+    const node = Messages.IndexNode.decode(head)
+    node.index = index
+    return node
   }
 
   _createIndexNode (id) {
