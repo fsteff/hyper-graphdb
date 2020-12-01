@@ -1,0 +1,22 @@
+message IndexNode {
+    required uint64 id = 1;
+    repeated uint64 children = 2;
+    repeated uint64 content = 3;
+}
+
+message Edge {
+    required uint64 index = 1;
+    required string name = 2;
+    map<string, bytes> attributes = 3;
+    optional bytes feed = 4;
+}
+
+message GraphNode {
+    required bytes value = 1;
+    repeated Edge edges = 2;
+}
+
+message HypercoreHeader {
+  required string dataStructureType = 1;
+  optional bytes extension = 2;
+}

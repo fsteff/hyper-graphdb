@@ -1,0 +1,35 @@
+{
+  "name": "hyper-graphdb",
+  "version": "0.0.1",
+  "description": "hypercore backed graph db",
+  "main": "index.js",
+  "scripts": {
+    "generate_protobuf": "protocol-buffers -o ./messages.js ./schema.proto"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fsteff/hyper-graphdb.git"
+  },
+  "keywords": [
+    "hypercore",
+    "p2p",
+    "graph",
+    "db"
+  ],
+  "author": "Stefan Fixl (Fsteff)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fsteff/hyper-graphdb/issues"
+  },
+  "homepage": "https://github.com/fsteff/hyper-graphdb#readme",
+  "dependencies": {
+    "codecs": "^2.2.0"
+  },
+  "devDependencies": {
+    "protocol-buffers": "^4.2.0",
+    "random-access-memory": "^3.1.1",
+    "standard": "^16.0.3",
+    "tape": "^5.0.1",
+    "hypercore": "^9.6.0"
+  }
+}
