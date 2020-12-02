@@ -48,15 +48,15 @@ class HyperGraphDB {
     while (indexNode.content.length <= slot) indexNode.content.push(0)
     indexNode.content[slot] = index
 
-    console.log('saving data node at #' + index + ': id:' + id)
-    console.log('saving at #' + (index + 1) + ': ' + nodeToString(indexNode))
+    // console.log('saving data node at #' + index + ': id:' + id)
+    // console.log('saving at #' + (index + 1) + ': ' + nodeToString(indexNode))
     const bulk = [data, Messages.IndexNode.encode(indexNode)]
     let addr = id >> BUCKET_WIDTH
     slot = (addr & BUCKET_MASK) - 1
     while (addr > 0) {
       const parent = await this._getIndexNode(addr)
       parent.children[slot] = index + bulk.length - 1
-      console.log('saving at #' + (index + bulk.length) + ': ' + nodeToString(parent))
+      // console.log('saving at #' + (index + bulk.length) + ': ' + nodeToString(parent))
       bulk.push(Messages.IndexNode.encode(parent))
       slot = addr & BUCKET_MASK
       addr = addr >> BUCKET_WIDTH
@@ -64,9 +64,9 @@ class HyperGraphDB {
 
     await this.feed.append(bulk)
 
-    function nodeToString (node) {
-      return `IndexNode{id:${node.id}, children: [${node.children}], content: [${node.content}], index: ${node.index}}`
-    }
+    // function nodeToString (node) {
+    //  return `IndexNode{id:${node.id}, children: [${node.children}], content: [${node.content}], index: ${node.index}}`
+    // }
   }
 
   async _getIndexNode (id) {
@@ -83,7 +83,7 @@ class HyperGraphDB {
       if (decoded.children.length > slot && decoded.children[slot] !== 0) {
         decoded = await this._fetchNodeAt(decoded.children[slot])
       } else {
-        console.log(`IndexNode ${prefix} not found in {id: ${decoded.id}, children:[${decoded.children}]} at #${decoded.index}, creating new`)
+        // console.log(`IndexNode ${prefix} not found in {id: ${decoded.id}, children:[${decoded.children}]} at #${decoded.index}, creating new`)
         return this._createIndexNode(prefix)
       }
       slot = addr & BUCKET_MASK
