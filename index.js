@@ -1,5 +1,6 @@
 const Messages = require('./messages')
-const codecs = require('codecs')
+const Node = require('./lib/Node')
+const asyncFeed = require('./lib/asyncFeed')
 
 const BUCKET_WIDTH = 3
 const BUCKET_SIZE = 1 << BUCKET_WIDTH
@@ -9,7 +10,7 @@ class HyperGraphDB {
   constructor (feed, opts = { valueEncoding: 'binary', onWrite: null, onRead: null }) {
     opts = opts || {}
     this.valueEncoding = opts.valueEncoding
-    this.feed = promisify(feed)
+    this.feed = asyncFeed(feed)
     this.idCtr = 0
   }
 
@@ -42,21 +43,30 @@ class HyperGraphDB {
       data = this.onWrite(index, data)
     }
 
-    const slot = id & BUCKET_MASK
+    let slot = id & BUCKET_MASK
     const indexNode = await this._getIndexNode(id)
     while (indexNode.content.length <= slot) indexNode.content.push(0)
     indexNode.content[slot] = index
 
+    console.log('saving data node at #' + index + ': id:' + id)
+    console.log('saving at #' + (index + 1) + ': ' + nodeToString(indexNode))
     const bulk = [data, Messages.IndexNode.encode(indexNode)]
     let addr = id >> BUCKET_WIDTH
+    slot = (addr & BUCKET_MASK) - 1
     while (addr > 0) {
       const parent = await this._getIndexNode(addr)
-      parent.children[addr & BUCKET_MASK] = index + bulk.length
+      parent.children[slot] = index + bulk.length - 1
+      console.log('saving at #' + (index + bulk.length) + ': ' + nodeToString(parent))
       bulk.push(Messages.IndexNode.encode(parent))
+      slot = addr & BUCKET_MASK
       addr = addr >> BUCKET_WIDTH
     }
 
     await this.feed.append(bulk)
+
+    function nodeToString (node) {
+      return `IndexNode{id:${node.id}, children: [${node.children}], content: [${node.content}], index: ${node.index}}`
+    }
   }
 
   async _getIndexNode (id) {
@@ -73,6 +83,7 @@ class HyperGraphDB {
       if (decoded.children.length > slot && decoded.children[slot] !== 0) {
         decoded = await this._fetchNodeAt(decoded.children[slot])
       } else {
+        console.log(`IndexNode ${prefix} not found in {id: ${decoded.id}, children:[${decoded.children}]} at #${decoded.index}, creating new`)
         return this._createIndexNode(prefix)
       }
       slot = addr & BUCKET_MASK
@@ -84,7 +95,7 @@ class HyperGraphDB {
   async _fetchNodeAt (index) {
     const head = await (index >= 0 ? this.feed.get(index) : this.feed.head())
     const node = Messages.IndexNode.decode(head)
-    node.index = index
+    node.index = index >= 0 ? index : await this.feed.length() - 1
     return node
   }
 
@@ -94,118 +105,6 @@ class HyperGraphDB {
       children: [],
       content: []
     }
-  }
-}
-
-class Node {
-  constructor (id, persist, opts = { valueEncoding: 'binary', autoSave: false, remoteFeed: null }) {
-    opts = opts || {}
-    this.id = id
-    this.persist = () => persist(this.serialize())
-    this.codec = toCodec(opts.valueEncoding)
-    this.autoSave = !!opts.autoSave
-    this.feed = opts.remoteFeed
-
-    this.index = null
-    this._data = null
-    this._edges = []
-    this._dirty = false
-  }
-
-  serialize () {
-    const node = {
-      value: this._data || Buffer.alloc(0),
-      edges: this._edges
-    }
-    return Messages.GraphNode.encode(node)
-  }
-
-  setData (value) {
-    this._data = value ? this.codec.encode(value) : null
-    if (this.autoSave) this.persist()
-    else this._dirty = true
-  }
-
-  getData () {
-    return this._data ? this.codec.decode(this._data) : null
-  }
-
-  link (key, node, attributes = {}) {
-    const edge = {
-      index: node.index,
-      name: key,
-      attributes: attributes,
-      feed: node.feed
-    }
-
-    const oldEdge = this._edges.findIndex(e => e.name === key)
-    if (oldEdge >= 0) {
-      this._edges[oldEdge] = edge
-    } else {
-      this._edges.push(edge)
-    }
-  }
-}
-
-function toCodec (encoding) {
-  if (!encoding) return codecs.binary
-  if (typeof encoding === 'string') return codecs(encoding)
-  else return encoding
-}
-
-function promisify (feed) {
-  const pending = []
-  const readyPromise = ready().then(onReady)
-  return {
-    feed,
-    length,
-    ready: () => readyPromise,
-    get: (...args) => promise(feed.get, ...args),
-    append: (...args) => promise(feed.append, ...args),
-    head: (...args) => promise(feed.head, ...args)
-  }
-
-  async function ready () {
-    return new Promise((resolve, reject) => {
-      feed.ready((err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-  }
-
-  async function onReady () {
-    if (await length() === 0) {
-      const encoded = Messages.HypercoreHeader.encode({ dataStructureType: 'hyper-graphdb' })
-      await new Promise((resolve, reject) => {
-        feed.append(encoded, err => {
-          if (err) reject(err)
-          else resolve()
-        })
-      })
-    }
-  }
-
-  async function length () {
-    while (pending.length > 0) {
-      await Promise.all(pending)
-    }
-    if (pending.length > 0) throw new Error('pending should be zero!')
-    return feed.length
-  }
-
-  async function promise (foo, ...args) {
-    await readyPromise
-    const p = new Promise((resolve, reject) => {
-      foo.call(feed, ...args, (err, result) => {
-        pending.splice(pending.indexOf(p), 1)
-
-        if (err) reject(err)
-        else resolve(result)
-      })
-    })
-    pending.push(p)
-    return p
   }
 }
 
