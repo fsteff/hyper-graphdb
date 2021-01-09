@@ -57,7 +57,7 @@ export class Vertex<T> {
         this.id = id
     }
 
-    getEdges(label: string) : Array<Edge> {
+    getEdges(label?: string) : Array<Edge> {
         if(label) return this.edges.filter(e => e.label === label)
         else return this.edges
     }
@@ -68,6 +68,10 @@ export class Vertex<T> {
 
     addEdge(edge: Edge) {
         this.edges.push(edge)
+    }
+
+    addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Map<string, Buffer>) {
+        this.edges.push({ref: vertex.getId(), label, feed, metadata})
     }
 
     removeEdge(ref: number | string | Edge | Array<Edge>) {
