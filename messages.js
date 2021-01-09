@@ -10,7 +10,7 @@ var encodings = require('protocol-buffers-encodings')
 var varint = encodings.varint
 var skip = encodings.skip
 
-var IndexNode = exports.IndexNode = {
+var Vertex = exports.Vertex = {
   buffer: true,
   encodingLength: null,
   encode: null,
@@ -24,20 +24,6 @@ var Edge = exports.Edge = {
   decode: null
 }
 
-var GraphNode = exports.GraphNode = {
-  buffer: true,
-  encodingLength: null,
-  encode: null,
-  decode: null
-}
-
-var HypercoreHeader = exports.HypercoreHeader = {
-  buffer: true,
-  encodingLength: null,
-  encode: null,
-  decode: null
-}
-
 var Map_string_bytes = exports.Map_string_bytes = {
   buffer: true,
   encodingLength: null,
@@ -45,35 +31,40 @@ var Map_string_bytes = exports.Map_string_bytes = {
   decode: null
 }
 
-defineIndexNode()
+defineVertex()
 defineEdge()
-defineGraphNode()
-defineHypercoreHeader()
 defineMap_string_bytes()
 
-function defineIndexNode () {
-  IndexNode.encodingLength = encodingLength
-  IndexNode.encode = encode
-  IndexNode.decode = decode
+function defineVertex () {
+  Vertex.encodingLength = encodingLength
+  Vertex.encode = encode
+  Vertex.decode = decode
 
   function encodingLength (obj) {
     var length = 0
-    if (!defined(obj.id)) throw new Error("id is required")
-    var len = encodings.varint.encodingLength(obj.id)
-    length += 1 + len
-    if (defined(obj.children)) {
-      for (var i = 0; i < obj.children.length; i++) {
-        if (!defined(obj.children[i])) continue
-        var len = encodings.varint.encodingLength(obj.children[i])
+    if (defined(obj.edges)) {
+      for (var i = 0; i < obj.edges.length; i++) {
+        if (!defined(obj.edges[i])) continue
+        var len = Edge.encodingLength(obj.edges[i])
+        length += varint.encodingLength(len)
+        length += 1 + len
+      }
+    }
+    if (defined(obj.metadata)) {
+      var tmp = Object.keys(obj.metadata)
+      for (var i = 0; i < tmp.length; i++) {
+        tmp[i] = {key: tmp[i], value: obj.metadata[tmp[i]]}
+      }
+      for (var i = 0; i < tmp.length; i++) {
+        if (!defined(tmp[i])) continue
+        var len = Map_string_bytes.encodingLength(tmp[i])
+        length += varint.encodingLength(len)
         length += 1 + len
       }
     }
     if (defined(obj.content)) {
-      for (var i = 0; i < obj.content.length; i++) {
-        if (!defined(obj.content[i])) continue
-        var len = encodings.varint.encodingLength(obj.content[i])
-        length += 1 + len
-      }
+      var len = encodings.bytes.encodingLength(obj.content)
+      length += 1 + len
     }
     return length
   }
@@ -82,25 +73,34 @@ function defineIndexNode () {
     if (!offset) offset = 0
     if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
     var oldOffset = offset
-    if (!defined(obj.id)) throw new Error("id is required")
-    buf[offset++] = 8
-    encodings.varint.encode(obj.id, buf, offset)
-    offset += encodings.varint.encode.bytes
-    if (defined(obj.children)) {
-      for (var i = 0; i < obj.children.length; i++) {
-        if (!defined(obj.children[i])) continue
-        buf[offset++] = 16
-        encodings.varint.encode(obj.children[i], buf, offset)
-        offset += encodings.varint.encode.bytes
+    if (defined(obj.edges)) {
+      for (var i = 0; i < obj.edges.length; i++) {
+        if (!defined(obj.edges[i])) continue
+        buf[offset++] = 10
+        varint.encode(Edge.encodingLength(obj.edges[i]), buf, offset)
+        offset += varint.encode.bytes
+        Edge.encode(obj.edges[i], buf, offset)
+        offset += Edge.encode.bytes
+      }
+    }
+    if (defined(obj.metadata)) {
+      var tmp = Object.keys(obj.metadata)
+      for (var i = 0; i < tmp.length; i++) {
+        tmp[i] = {key: tmp[i], value: obj.metadata[tmp[i]]}
+      }
+      for (var i = 0; i < tmp.length; i++) {
+        if (!defined(tmp[i])) continue
+        buf[offset++] = 18
+        varint.encode(Map_string_bytes.encodingLength(tmp[i]), buf, offset)
+        offset += varint.encode.bytes
+        Map_string_bytes.encode(tmp[i], buf, offset)
+        offset += Map_string_bytes.encode.bytes
       }
     }
     if (defined(obj.content)) {
-      for (var i = 0; i < obj.content.length; i++) {
-        if (!defined(obj.content[i])) continue
-        buf[offset++] = 24
-        encodings.varint.encode(obj.content[i], buf, offset)
-        offset += encodings.varint.encode.bytes
-      }
+      buf[offset++] = 26
+      encodings.bytes.encode(obj.content, buf, offset)
+      offset += encodings.bytes.encode.bytes
     }
     encode.bytes = offset - oldOffset
     return buf
@@ -112,14 +112,12 @@ function defineIndexNode () {
     if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
     var oldOffset = offset
     var obj = {
-      id: 0,
-      children: [],
-      content: []
+      edges: [],
+      metadata: {},
+      content: null
     }
-    var found0 = false
     while (true) {
       if (end <= offset) {
-        if (!found0) throw new Error("Decoded message is not valid")
         decode.bytes = offset - oldOffset
         return obj
       }
@@ -128,17 +126,21 @@ function defineIndexNode () {
       var tag = prefix >> 3
       switch (tag) {
         case 1:
-        obj.id = encodings.varint.decode(buf, offset)
-        offset += encodings.varint.decode.bytes
-        found0 = true
+        var len = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        obj.edges.push(Edge.decode(buf, offset, offset + len))
+        offset += Edge.decode.bytes
         break
         case 2:
-        obj.children.push(encodings.varint.decode(buf, offset))
-        offset += encodings.varint.decode.bytes
+        var len = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        var tmp = Map_string_bytes.decode(buf, offset, offset + len)
+        obj.metadata[tmp.key] = tmp.value
+        offset += Map_string_bytes.decode.bytes
         break
         case 3:
-        obj.content.push(encodings.varint.decode(buf, offset))
-        offset += encodings.varint.decode.bytes
+        obj.content = encodings.bytes.decode(buf, offset)
+        offset += encodings.bytes.decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)
@@ -154,16 +156,20 @@ function defineEdge () {
 
   function encodingLength (obj) {
     var length = 0
-    if (!defined(obj.index)) throw new Error("index is required")
-    var len = encodings.varint.encodingLength(obj.index)
+    if (!defined(obj.ref)) throw new Error("ref is required")
+    var len = encodings.varint.encodingLength(obj.ref)
     length += 1 + len
-    if (!defined(obj.name)) throw new Error("name is required")
-    var len = encodings.string.encodingLength(obj.name)
+    if (defined(obj.feed)) {
+      var len = encodings.bytes.encodingLength(obj.feed)
+      length += 1 + len
+    }
+    if (!defined(obj.label)) throw new Error("label is required")
+    var len = encodings.string.encodingLength(obj.label)
     length += 1 + len
-    if (defined(obj.attributes)) {
-      var tmp = Object.keys(obj.attributes)
+    if (defined(obj.metadata)) {
+      var tmp = Object.keys(obj.metadata)
       for (var i = 0; i < tmp.length; i++) {
-        tmp[i] = {key: tmp[i], value: obj.attributes[tmp[i]]}
+        tmp[i] = {key: tmp[i], value: obj.metadata[tmp[i]]}
       }
       for (var i = 0; i < tmp.length; i++) {
         if (!defined(tmp[i])) continue
@@ -172,10 +178,6 @@ function defineEdge () {
         length += 1 + len
       }
     }
-    if (defined(obj.feed)) {
-      var len = encodings.bytes.encodingLength(obj.feed)
-      length += 1 + len
-    }
     return length
   }
 
@@ -183,33 +185,33 @@ function defineEdge () {
     if (!offset) offset = 0
     if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
     var oldOffset = offset
-    if (!defined(obj.index)) throw new Error("index is required")
+    if (!defined(obj.ref)) throw new Error("ref is required")
     buf[offset++] = 8
-    encodings.varint.encode(obj.index, buf, offset)
+    encodings.varint.encode(obj.ref, buf, offset)
     offset += encodings.varint.encode.bytes
-    if (!defined(obj.name)) throw new Error("name is required")
-    buf[offset++] = 18
-    encodings.string.encode(obj.name, buf, offset)
+    if (defined(obj.feed)) {
+      buf[offset++] = 18
+      encodings.bytes.encode(obj.feed, buf, offset)
+      offset += encodings.bytes.encode.bytes
+    }
+    if (!defined(obj.label)) throw new Error("label is required")
+    buf[offset++] = 26
+    encodings.string.encode(obj.label, buf, offset)
     offset += encodings.string.encode.bytes
-    if (defined(obj.attributes)) {
-      var tmp = Object.keys(obj.attributes)
+    if (defined(obj.metadata)) {
+      var tmp = Object.keys(obj.metadata)
       for (var i = 0; i < tmp.length; i++) {
-        tmp[i] = {key: tmp[i], value: obj.attributes[tmp[i]]}
+        tmp[i] = {key: tmp[i], value: obj.metadata[tmp[i]]}
       }
       for (var i = 0; i < tmp.length; i++) {
         if (!defined(tmp[i])) continue
-        buf[offset++] = 26
+        buf[offset++] = 34
         varint.encode(Map_string_bytes.encodingLength(tmp[i]), buf, offset)
         offset += varint.encode.bytes
         Map_string_bytes.encode(tmp[i], buf, offset)
         offset += Map_string_bytes.encode.bytes
       }
     }
-    if (defined(obj.feed)) {
-      buf[offset++] = 34
-      encodings.bytes.encode(obj.feed, buf, offset)
-      offset += encodings.bytes.encode.bytes
-    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -220,16 +222,16 @@ function defineEdge () {
     if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
     var oldOffset = offset
     var obj = {
-      index: 0,
-      name: "",
-      attributes: {},
-      feed: null
+      ref: 0,
+      feed: null,
+      label: "",
+      metadata: {}
     }
     var found0 = false
-    var found1 = false
+    var found2 = false
     while (true) {
       if (end <= offset) {
-        if (!found0 || !found1) throw new Error("Decoded message is not valid")
+        if (!found0 || !found2) throw new Error("Decoded message is not valid")
         decode.bytes = offset - oldOffset
         return obj
       }
@@ -238,176 +240,25 @@ function defineEdge () {
       var tag = prefix >> 3
       switch (tag) {
         case 1:
-        obj.index = encodings.varint.decode(buf, offset)
+        obj.ref = encodings.varint.decode(buf, offset)
         offset += encodings.varint.decode.bytes
         found0 = true
         break
         case 2:
-        obj.name = encodings.string.decode(buf, offset)
-        offset += encodings.string.decode.bytes
-        found1 = true
-        break
-        case 3:
-        var len = varint.decode(buf, offset)
-        offset += varint.decode.bytes
-        var tmp = Map_string_bytes.decode(buf, offset, offset + len)
-        obj.attributes[tmp.key] = tmp.value
-        offset += Map_string_bytes.decode.bytes
-        break
-        case 4:
         obj.feed = encodings.bytes.decode(buf, offset)
         offset += encodings.bytes.decode.bytes
         break
-        default:
-        offset = skip(prefix & 7, buf, offset)
-      }
-    }
-  }
-}
-
-function defineGraphNode () {
-  GraphNode.encodingLength = encodingLength
-  GraphNode.encode = encode
-  GraphNode.decode = decode
-
-  function encodingLength (obj) {
-    var length = 0
-    if (!defined(obj.value)) throw new Error("value is required")
-    var len = encodings.bytes.encodingLength(obj.value)
-    length += 1 + len
-    if (defined(obj.edges)) {
-      for (var i = 0; i < obj.edges.length; i++) {
-        if (!defined(obj.edges[i])) continue
-        var len = Edge.encodingLength(obj.edges[i])
-        length += varint.encodingLength(len)
-        length += 1 + len
-      }
-    }
-    return length
-  }
-
-  function encode (obj, buf, offset) {
-    if (!offset) offset = 0
-    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
-    var oldOffset = offset
-    if (!defined(obj.value)) throw new Error("value is required")
-    buf[offset++] = 10
-    encodings.bytes.encode(obj.value, buf, offset)
-    offset += encodings.bytes.encode.bytes
-    if (defined(obj.edges)) {
-      for (var i = 0; i < obj.edges.length; i++) {
-        if (!defined(obj.edges[i])) continue
-        buf[offset++] = 18
-        varint.encode(Edge.encodingLength(obj.edges[i]), buf, offset)
-        offset += varint.encode.bytes
-        Edge.encode(obj.edges[i], buf, offset)
-        offset += Edge.encode.bytes
-      }
-    }
-    encode.bytes = offset - oldOffset
-    return buf
-  }
-
-  function decode (buf, offset, end) {
-    if (!offset) offset = 0
-    if (!end) end = buf.length
-    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
-    var oldOffset = offset
-    var obj = {
-      value: null,
-      edges: []
-    }
-    var found0 = false
-    while (true) {
-      if (end <= offset) {
-        if (!found0) throw new Error("Decoded message is not valid")
-        decode.bytes = offset - oldOffset
-        return obj
-      }
-      var prefix = varint.decode(buf, offset)
-      offset += varint.decode.bytes
-      var tag = prefix >> 3
-      switch (tag) {
-        case 1:
-        obj.value = encodings.bytes.decode(buf, offset)
-        offset += encodings.bytes.decode.bytes
-        found0 = true
+        case 3:
+        obj.label = encodings.string.decode(buf, offset)
+        offset += encodings.string.decode.bytes
+        found2 = true
         break
-        case 2:
+        case 4:
         var len = varint.decode(buf, offset)
         offset += varint.decode.bytes
-        obj.edges.push(Edge.decode(buf, offset, offset + len))
-        offset += Edge.decode.bytes
-        break
-        default:
-        offset = skip(prefix & 7, buf, offset)
-      }
-    }
-  }
-}
-
-function defineHypercoreHeader () {
-  HypercoreHeader.encodingLength = encodingLength
-  HypercoreHeader.encode = encode
-  HypercoreHeader.decode = decode
-
-  function encodingLength (obj) {
-    var length = 0
-    if (!defined(obj.dataStructureType)) throw new Error("dataStructureType is required")
-    var len = encodings.string.encodingLength(obj.dataStructureType)
-    length += 1 + len
-    if (defined(obj.extension)) {
-      var len = encodings.bytes.encodingLength(obj.extension)
-      length += 1 + len
-    }
-    return length
-  }
-
-  function encode (obj, buf, offset) {
-    if (!offset) offset = 0
-    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
-    var oldOffset = offset
-    if (!defined(obj.dataStructureType)) throw new Error("dataStructureType is required")
-    buf[offset++] = 10
-    encodings.string.encode(obj.dataStructureType, buf, offset)
-    offset += encodings.string.encode.bytes
-    if (defined(obj.extension)) {
-      buf[offset++] = 18
-      encodings.bytes.encode(obj.extension, buf, offset)
-      offset += encodings.bytes.encode.bytes
-    }
-    encode.bytes = offset - oldOffset
-    return buf
-  }
-
-  function decode (buf, offset, end) {
-    if (!offset) offset = 0
-    if (!end) end = buf.length
-    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
-    var oldOffset = offset
-    var obj = {
-      dataStructureType: "",
-      extension: null
-    }
-    var found0 = false
-    while (true) {
-      if (end <= offset) {
-        if (!found0) throw new Error("Decoded message is not valid")
-        decode.bytes = offset - oldOffset
-        return obj
-      }
-      var prefix = varint.decode(buf, offset)
-      offset += varint.decode.bytes
-      var tag = prefix >> 3
-      switch (tag) {
-        case 1:
-        obj.dataStructureType = encodings.string.decode(buf, offset)
-        offset += encodings.string.decode.bytes
-        found0 = true
-        break
-        case 2:
-        obj.extension = encodings.bytes.decode(buf, offset)
-        offset += encodings.bytes.decode.bytes
+        var tmp = Map_string_bytes.decode(buf, offset, offset + len)
+        obj.metadata[tmp.key] = tmp.value
+        offset += Map_string_bytes.decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)
