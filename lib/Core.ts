@@ -2,6 +2,7 @@ import { HyperObjects } from 'hyperobjects'
 import Corestore from 'corestore'
 import { Vertex } from './Vertex'
 import codecs from 'codecs'
+import Transaction from 'hyperobjects/lib/Transaction'
 
 export type RWFunction = (data: Buffer, feed: Buffer, index: number) => Buffer
 export type DBOpts = {onRead: RWFunction, onWrite: RWFunction}
@@ -26,8 +27,19 @@ export class Core {
         })
         const vertex = Vertex.decode<T>(obj, contentEncoding)
         vertex.setId(vertexId)
-
+        vertex.setFeed(this.feedId(feed))
         return vertex
+    }
+
+    async getInTransaction<T>(id: number | string, contentEncoding : string | codecs.BaseCodec<T>, tr: Transaction, feed: string) : Promise<Vertex<T>> {
+        const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
+        return tr.get(vertexId)
+        .then(obj => {
+            const vertex = Vertex.decode<T>(obj, contentEncoding)
+            vertex.setId(vertexId)
+            vertex.setFeed(feed)
+            return vertex
+        })
     }
 
     async put<T>(feed: string | Buffer, vertex: Vertex<T>) {
@@ -51,6 +63,7 @@ export class Core {
 
         for(const {vertex, id} of ids) {
             vertex.setId(<number>id?.id)
+            vertex.setFeed(this.feedId(feed))
         }
     }
 
@@ -68,7 +81,7 @@ export class Core {
         } 
     }
 
-    private async getStore(feed?: string | Buffer) : Promise<HyperObjects>{
+    async getStore(feed?: string | Buffer) : Promise<HyperObjects>{
         const self = this
         if(!feed) {
             const created = await getDB()

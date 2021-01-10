@@ -8,6 +8,7 @@ export class Vertex<T> {
     private metadata?: Map<string, Buffer>
     private edges: Array<Edge>
     private codec: codecs.BaseCodec<T>
+    private feed?: string
 
     constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: {id: number, content: Buffer, edges: Array<Edge>}) {
         this.id = -1
@@ -89,5 +90,13 @@ export class Vertex<T> {
 
     static decode<T>(buf: Buffer, contentEncoding: string | codecs.BaseCodec<T>) : Vertex<T> {
         return new Vertex(contentEncoding, Messages.Vertex.decode(buf))
+    }
+
+    getFeed() : string | undefined{
+        return this.feed
+    }
+
+    setFeed(feed: string) {
+        this.feed = feed
     }
 }
