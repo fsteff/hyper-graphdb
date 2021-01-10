@@ -9,7 +9,7 @@ export default class NameIndex implements Index {
     }
     get(key: string): Array<VertexId> {
         if(this.names.has(key)){
-            const vertices = this.names.get(key)
+            const vertices = <Set<VertexId>> this.names.get(key)
             return [...vertices]
         }
         else return []
@@ -18,12 +18,14 @@ export default class NameIndex implements Index {
         if(!edge || !edge.label) return
         const name = edge.label
 
+        console.log('NamedIndex got ' + JSON.stringify({v: vertex.getId(), l: edge.label}))
+
         let entries: Set<VertexId>
         if(!this.names.has(name)) {
             entries = new Set<VertexId>()
             this.names.set(name, entries)
         } else {
-            entries = this.names.get(name)
+            entries = <Set<VertexId>> this.names.get(name)
         }
         const id = vertex.getId()
         entries.add({id, feed})

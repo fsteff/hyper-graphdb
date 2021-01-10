@@ -10,7 +10,7 @@ export class Vertex<T> {
     private codec: codecs.BaseCodec<T>
 
     constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: {id: number, content: Buffer, edges: Array<Edge>}) {
-        this.id = 0
+        this.id = -1
         if(data) {
             this.content = data.content
             this.edges = data.edges || []    
