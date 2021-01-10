@@ -10,3 +10,8 @@ message Edge {
     required string label = 3;
     map<string, bytes> metadata = 4;
 }
+
+message GraphContent {
+    required string type = 1;
+    optional bytes data = 2;
+}

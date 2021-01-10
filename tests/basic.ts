@@ -1,15 +1,17 @@
-import { HyperGraphDB } from '../index'
+import { Core } from '../lib/Core'
 import RAM from 'random-access-memory'
 import Corestore from 'corestore'
 import tape from 'tape'
 import { Vertex, Edge } from '../lib/Vertex'
 import Crawler from '../lib/Crawler'
 import NameIndex from '../lib/NameIndex'
+import { HyperGraphDB } from '..'
+import { SimpleGraphObject } from '../lib/Codec'
 
-tape('basic', async t => {
+tape('core', async t => {
     const store = new Corestore(RAM)
     await store.ready()
-    const db = new HyperGraphDB(store)
+    const db = new Core(store)
     const feed = await db.getDefaultFeedId()
 
     const v1 = new Vertex<string>('utf-8')
@@ -43,7 +45,7 @@ tape('basic', async t => {
 tape('crawler', async t => {
     const store = new Corestore(RAM)
     await store.ready()
-    const db = new HyperGraphDB(store)
+    const db = new Core(store)
     const feed = (await db.getDefaultFeedId()).toString('hex')
 
     const v1 = new Vertex<Buffer>('binary')
@@ -55,7 +57,7 @@ tape('crawler', async t => {
 
     const crawler = new Crawler(db)
     const idx = new NameIndex()
-    db.registerIndex(idx)
+    crawler.registerIndex(idx)
 
     await crawler.crawl(feed, v1.getId(), 'binary')
     t.same([v2.getId()], idx.get('child').map(o => o.id))
@@ -76,7 +78,7 @@ tape('onRW', async t => {
 
     const store = new Corestore(RAM)
     await store.ready()
-    const db = new HyperGraphDB(store, undefined, {onRead, onWrite})
+    const db = new Core(store, undefined, {onRead, onWrite})
     const feed = (await db.getDefaultFeedId()).toString('hex')
 
     const v1 = new Vertex<string>('utf-8')
@@ -89,4 +91,20 @@ tape('onRW', async t => {
     t.same(v.getContent(), 'hello')
     v = await db.get<string>(feed, v2.getId(), 'utf-8')
     t.same(v.getContent(), 'world')
+})
+
+tape('db', async t => {
+    const store = new Corestore(RAM)
+    await store.ready()
+    const db = new HyperGraphDB(store)
+
+    const v1 = db.create<SimpleGraphObject>(), v2 = db.create<SimpleGraphObject>()
+    v1.setContent(new SimpleGraphObject().set('greeting', 'hello'))
+    v2.setContent(new SimpleGraphObject().set('greeting', 'hola'))
+    await db.put([v1, v2])
+
+    let c1 = <Vertex<SimpleGraphObject>> await db.get(v1.getId())
+    let c2 = <Vertex<SimpleGraphObject>> await db.get(v2.getId())
+    t.same('hello', c1.getContent()?.get('greeting'))
+    t.same('hola', c2.getContent()?.get('greeting'))
 })
