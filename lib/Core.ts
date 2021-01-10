@@ -1,11 +1,11 @@
-import { HyperObjects } from 'hyperobjects'
-import Corestore from 'corestore'
-import { Vertex } from './Vertex'
 import codecs from 'codecs'
-import Transaction from 'hyperobjects/lib/Transaction'
+import { Transaction } from 'hyperobjects'
+import { Feed, HyperObjects } from 'hyperobjects'
+import { Vertex } from './Vertex'
 
 export type RWFunction = (data: Buffer, feed: Buffer, index: number) => Buffer
 export type DBOpts = {onRead: RWFunction, onWrite: RWFunction}
+export type Corestore = {get: (opts?: {key?: string | Buffer}) => Feed}
 
 export class Core {
     private objectStores = new Map<string, HyperObjects>()

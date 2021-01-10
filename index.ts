@@ -1,5 +1,4 @@
-import { Core, DBOpts } from './lib/Core'
-import Corestore from 'corestore'
+import { Core, DBOpts, Corestore } from './lib/Core'
 import { Codec, SimpleGraphObject, GraphObject } from './lib/Codec'
 import { Vertex } from './lib/Vertex'
 import Crawler from './lib/Crawler'

@@ -1,4 +1,4 @@
-import Transaction from "hyperobjects/lib/Transaction";
+import  { Transaction } from "hyperobjects";
 import { Vertex } from "..";
 
 export type VertexQuery<T> = {
