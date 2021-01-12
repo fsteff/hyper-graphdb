@@ -68,4 +68,9 @@ tape('repeat query', async t => {
     t.same(100, results.length)
     t.same(v[1].getId(), results[0].getId())
 
+    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), undefined, 10).generator().destruct()
+    t.same(10, results.length)
+
+    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.getId() === v[10].getId()) < 0).generator().destruct()
+    t.same(10, results.length)
 })

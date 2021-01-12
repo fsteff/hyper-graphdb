@@ -25,7 +25,7 @@
   "dependencies": {
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
-    "hyperobjects": "^0.1.1"
+    "hyperobjects": "^0.1.2"
   },
   "devDependencies": {
     "@types/codecs": "^2.2.2",

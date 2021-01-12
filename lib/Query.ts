@@ -56,18 +56,18 @@ export class Query<T> {
         return this.vertexQueries.map(async v => await v.vertex)
     }
 
-    repeat(operators: (query: Query<T>) => Query<T>, until?: (vertices: Promise<Vertex<T>>[]) => boolean,  maxDepth?: number) : Query<T> {
+    repeat(operators: (query: Query<T>) => Query<T>, until?: (vertices: Vertex<T>[]) => boolean,  maxDepth?: number) : Query<T> {
         const self = this
         return new Query<T>(this.db, new Generator<VertexQuery<T>>(gen()), this.transactions, this.codec)
 
         async function* gen() {
             let depth = 0
-            let results = new Array<VertexQuery<T>>()
             let mapped = new Array<VertexQuery<T>>()
             let state: Query<T> = self
             let queries = await self.vertexQueries.destruct()
+            const results = new Array<Vertex<T>>()
 
-            while((!maxDepth || depth < maxDepth) && (!until || until(results.map(v => v.vertex))) && queries.length > 0) {
+            while((!maxDepth || depth < maxDepth) && (!until || until(results)) && queries.length > 0) {
                 const newVertices = await self.leftDisjoint<VertexQuery<T>>(queries, mapped, self.vertexQueryEquals) 
                 const subQuery = new Query<T>(self.db, Generator.from(newVertices), self.transactions, self.codec)
                 mapped = mapped.concat(newVertices)
@@ -76,6 +76,7 @@ export class Query<T> {
                 queries = await state.vertexQueries.destruct()
                 for(const q of queries) {
                     yield q
+                    results.push(await q.vertex)
                 }
                 depth++
             }
