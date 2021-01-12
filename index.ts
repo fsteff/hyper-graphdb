@@ -5,6 +5,7 @@ import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
 import { Query, VertexQuery } from './lib/Query'
 import { Transaction } from 'hyperobjects'
+import { Generator } from './lib/Generator'
 
 export {Vertex, GraphObject, Index}
 export class HyperGraphDB {
@@ -40,40 +41,41 @@ export class HyperGraphDB {
         return <Vertex<T>> new Vertex<GraphObject>(this.codec)
     }
 
-    async queryIndex(indexName: string, key: string) {
+    queryIndex(indexName: string, key: string) {
         const idx = this.indexes.find(i => i.indexName === indexName)
         if(!idx) throw new Error('no index of name "' + indexName + '" found')
 
         const vertices = new Array<VertexQuery<GraphObject>>()
         const transactions = new Map<string, Transaction>()
         for(const {id, feed} of idx.get(key)) {
-            let tr: Transaction
+            let tr: Promise<Transaction>
             if(!transactions.has(feed)) {
-                tr = await this.startTransaction(feed)
-                transactions.set(feed, tr)
+                tr = this.core.startTransaction(feed)
+                tr.then(tr => transactions.set(feed, tr))
             } else {
-                tr = <Transaction> transactions.get(feed)
+                tr = Promise.resolve(<Transaction> transactions.get(feed))
             }
-            transactions.set(feed, tr)
-            const promise = this.core.getInTransaction<GraphObject>(id, this.codec, tr, feed)
-            vertices.push({transaction: tr, vertex: promise})
+            const promise = tr.then(tr => this.core.getInTransaction<GraphObject>(id, this.codec, tr, feed))
+            vertices.push({feed, vertex: promise})
         }
-        return new Query<GraphObject>(vertices)
+        return new Query<GraphObject>(this.core, Generator.from(vertices), transactions, this.codec)
     }
 
-    async queryAt(id: number, feed: string|Buffer) {
-        feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
-        const tr = await this.startTransaction(feed)
-        const v = this.core.getInTransaction<GraphObject>(id, this.codec, tr, feed)
-        return new Query<GraphObject>([{transaction: tr, vertex: v}])
+    queryAtId(id: number, feed: string|Buffer) {
+        const transactions = new Map<string, Transaction>()
+        feed = <string> (Buffer.isBuffer(feed) ? feed.toString('hex') : feed)
+        const trPromise = this.core.startTransaction(feed)
+        const vertex = trPromise.then(tr => {
+            const v = this.core.getInTransaction<GraphObject>(id, this.codec, tr, <string>feed)
+            transactions.set(<string>feed, tr)
+            return v
+        })
+        
+        return new Query<GraphObject>(this.core, Generator.from([{feed, vertex}]), transactions, this.codec)
     }
 
-    private async startTransaction(feed: string) {
-        const store = await this.core.getStore(feed)
-        await store.storage.ready()
-        const head = await store.feed.length()
-        const tr = new Transaction(store.storage, head)
-        await tr.ready()
-        return tr
+    queryAtVertex(vertex: Vertex<GraphObject>) {
+        return this.queryAtId(vertex.getId(), <string> vertex.getFeed())
     }
+
 }

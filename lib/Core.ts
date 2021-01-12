@@ -115,4 +115,13 @@ export class Core {
             }
         }
     }
+
+    async startTransaction(feed: string) {
+        const store = await this.getStore(feed)
+        await store.storage.ready()
+        const head = await store.feed.length()
+        const tr = new Transaction(store.storage, head)
+        await tr.ready()
+        return tr
+    }
 }

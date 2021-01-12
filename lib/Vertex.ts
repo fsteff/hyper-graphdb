@@ -72,6 +72,8 @@ export class Vertex<T> {
     }
 
     addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Map<string, Buffer>) {
+        if(vertex.getId() < 0) throw new Error('Referenced vertex has no id')
+        if(!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')
         this.edges.push({ref: vertex.getId(), label, feed, metadata})
     }
 
