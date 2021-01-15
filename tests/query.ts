@@ -1,12 +1,9 @@
-import { Core } from '../lib/Core'
 import RAM from 'random-access-memory'
 import Corestore from 'corestore'
 import tape from 'tape'
 import { Vertex } from '../lib/Vertex'
-import Crawler from '../lib/Crawler'
-import NameIndex from '../lib/NameIndex'
 import { HyperGraphDB } from '..'
-import { GraphObject, SimpleGraphObject } from '../lib/Codec'
+import { SimpleGraphObject } from '../lib/Codec'
 
 tape('query', async t => {
     const store = new Corestore(RAM)

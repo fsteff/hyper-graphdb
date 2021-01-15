@@ -4,7 +4,8 @@
   "description": "hypercore backed graph db",
   "main": "index.js",
   "scripts": {
-    "generate_protobuf": "protocol-buffers -o ./messages.js ./schema.proto && copyfiles messages.js dist"
+    "generate_protobuf": "protocol-buffers -o ./messages.js ./schema.proto && copyfiles messages.js dist",
+    "test": "tape ./dist/tests/*.js"
   },
   "repository": {
     "type": "git",
