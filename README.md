@@ -3,6 +3,8 @@
 An experimental graph DB based on [HyperObjects](https://github.com/fsteff/hyperobjects).
 A DB can consist of an arbitrary number of feeds and the data is loaded sparsely.
 
+The query language is vaguely based on the gremlin query language, but technically does not have much in common.
+
 ## Examples
 
 ```javascript
@@ -47,6 +49,9 @@ for async (const vertex of query.vertices()) {
 
 // by using repeat() the passed query is repeated until a given predicate is met or the passed max depth is reached
 // the start point vertices are only visited once, so you don't have to worry about endless loops
-let results = await db.queryAtVertex(v[0]).repeat(q => q.out('child').out('parent')).generator().destruct()
+query = db.queryAtVertex(v1).repeat(q => q.out('child').out('parent')).generator().destruct()
+
+// the .machtes() query function allows you to filter the vertices
+query = db.queryAtVertex(v1).out('child').matches(v => v.getContent().get('greeting') === 'hola')
 
 ```
