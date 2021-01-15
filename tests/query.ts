@@ -19,11 +19,12 @@ tape('query', async t => {
     v2.addEdgeTo(v1, 'parent')
     await db.put([v1, v2])
 
-    let results = await db.queryAtId(v1.getId(), feed).out('child').generator().destruct()
-    t.same(1, results.length)
-    t.same(v2.getId(), results[0].getId())
+    let iter = db.queryAtId(v1.getId(), feed).out('child').vertices()
+    for await (const vertex of iter) {
+        t.same(v2.getId(), vertex.getId())
+    }
 
-    results = await db.queryAtVertex(v1).out('child').matches(o => (<Vertex<SimpleGraphObject>>o).getContent()?.get('greeting') === 'hola').generator().destruct()
+    let results = await db.queryAtVertex(v1).out('child').matches(o => (<Vertex<SimpleGraphObject>>o).getContent()?.get('greeting') === 'hola').generator().destruct()
     t.same(1, results.length)
     t.same(v2.getId(), results[0].getId())
 
