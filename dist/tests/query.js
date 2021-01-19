@@ -62,4 +62,27 @@ tape_1.default('repeat query', async (t) => {
     results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.getId() === v[10].getId()) < 0).generator().destruct();
     t.same(10, results.length);
 });
+tape_1.default('error handling', async (t) => {
+    t.plan(3);
+    const store = new corestore_1.default(random_access_memory_1.default);
+    await store.ready();
+    const db = new __1.HyperGraphDB(store);
+    const feed = await db.core.getDefaultFeedId();
+    try {
+        // throws 
+        await db.queryAtId(0, feed).generator().destruct();
+        t.fail('should have thrown an error');
+    }
+    catch (err) {
+        t.ok(err);
+    }
+    const v1 = db.create();
+    v1.addEdge({ label: 'next', ref: 1 });
+    await db.put(v1);
+    // handle the error 
+    const result = await db.queryAtId(0, feed).out('next').generator().destruct(err => {
+        t.ok(err);
+    });
+    t.same(result.length, 1);
+});
 //# sourceMappingURL=query.js.map

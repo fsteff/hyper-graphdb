@@ -24,9 +24,11 @@
   },
   "homepage": "https://github.com/fsteff/hyper-graphdb#readme",
   "dependencies": {
+    "@types/streamx": "^2.9.0",
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
-    "hyperobjects": "^0.1.2"
+    "hyperobjects": "^0.1.2",
+    "streamx": "^2.10.1"
   },
   "devDependencies": {
     "@types/codecs": "^2.2.2",
