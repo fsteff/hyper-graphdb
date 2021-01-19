@@ -95,5 +95,5 @@ tape('error handling', async t => {
     const result = await db.queryAtId(0, feed).out('next').generator().destruct(err => {
         t.ok(err)
     })
-    t.same(result.length, 1)
+    t.same(result.length, 0)
 })
