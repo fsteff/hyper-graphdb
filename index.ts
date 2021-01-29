@@ -13,8 +13,8 @@ export class HyperGraphDB {
     readonly crawler: Crawler
     readonly codec = new Codec()
 
-    constructor(corestore: Corestore, key?: string | Buffer, opts?: DBOpts) {
-        this.core = new Core(corestore, key, opts)
+    constructor(corestore: Corestore, key?: string | Buffer, opts?: DBOpts, customCore?: Core) {
+        this.core = customCore || new Core(corestore, key, opts)
         this.codec.registerImpl(data => new SimpleGraphObject(data))
         this.crawler = new Crawler(this.core)
     }
@@ -50,7 +50,7 @@ export class HyperGraphDB {
         for(const {id, feed} of idx.get(key)) {
             let tr: Promise<Transaction>
             if(!transactions.has(feed)) {
-                tr = this.core.startTransaction(feed)
+                tr = this.core.transaction(feed)
                 tr.then(tr => transactions.set(feed, tr))
             } else {
                 tr = Promise.resolve(<Transaction> transactions.get(feed))
@@ -64,7 +64,7 @@ export class HyperGraphDB {
     queryAtId(id: number, feed: string|Buffer) {
         const transactions = new Map<string, Transaction>()
         feed = <string> (Buffer.isBuffer(feed) ? feed.toString('hex') : feed)
-        const trPromise = this.core.startTransaction(feed)
+        const trPromise = this.core.transaction(feed)
         const vertex = trPromise.then(tr => {
             const v = this.core.getInTransaction<GraphObject>(id, this.codec, tr, <string>feed)
             transactions.set(<string>feed, tr)

@@ -89,7 +89,7 @@ export class Query<T> {
 
     private async getTransaction(feed: string) : Promise<Transaction>{
         if(this.transactions.has(feed)) return <Transaction>this.transactions.get(feed)
-        else return this.db.startTransaction(feed)
+        else return this.db.transaction(feed)
     }
 
     async resultReductor (arr: Promise<Array<VertexQuery<T>>> | undefined, vertices: Promise<Array<VertexQuery<T>>>) {

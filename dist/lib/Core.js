@@ -13,10 +13,7 @@ class Core {
     }
     async get(feed, id, contentEncoding) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
-        const store = await this.getStore(feed);
-        const obj = await store.transaction(tr => {
-            return tr.get(vertexId);
-        });
+        const obj = await this.transaction(feed, tr => tr.get(vertexId));
         const vertex = Vertex_1.Vertex.decode(obj, contentEncoding);
         vertex.setId(vertexId);
         vertex.setFeed(this.feedId(feed));
@@ -37,8 +34,7 @@ class Core {
     }
     async putAll(feed, vertices) {
         const ids = new Array();
-        const store = await this.getStore(feed);
-        await store.transaction(async (tr) => {
+        await this.transaction(feed, async (tr) => {
             for (const vertex of vertices) {
                 const encoded = vertex.encode();
                 if (vertex.getId() < 0) {
@@ -107,12 +103,17 @@ class Core {
             }
         }
     }
-    async startTransaction(feed) {
+    async transaction(feed, exec) {
         const store = await this.getStore(feed);
         await store.storage.ready();
         const head = await store.feed.length();
         const tr = new hyperobjects_1.Transaction(store.storage, head);
         await tr.ready();
+        if (exec) {
+            const retval = await exec(tr);
+            await tr.commit();
+            return retval;
+        }
         return tr;
     }
 }

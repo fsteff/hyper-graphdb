@@ -14,9 +14,9 @@ const Crawler_1 = __importDefault(require("./lib/Crawler"));
 const Query_1 = require("./lib/Query");
 const Generator_1 = require("./lib/Generator");
 class HyperGraphDB {
-    constructor(corestore, key, opts) {
+    constructor(corestore, key, opts, customCore) {
         this.codec = new Codec_1.Codec();
-        this.core = new Core_1.Core(corestore, key, opts);
+        this.core = customCore || new Core_1.Core(corestore, key, opts);
         this.codec.registerImpl(data => new Codec_1.SimpleGraphObject(data));
         this.crawler = new Crawler_1.default(this.core);
     }
@@ -48,7 +48,7 @@ class HyperGraphDB {
         for (const { id, feed } of idx.get(key)) {
             let tr;
             if (!transactions.has(feed)) {
-                tr = this.core.startTransaction(feed);
+                tr = this.core.transaction(feed);
                 tr.then(tr => transactions.set(feed, tr));
             }
             else {
@@ -62,7 +62,7 @@ class HyperGraphDB {
     queryAtId(id, feed) {
         const transactions = new Map();
         feed = (Buffer.isBuffer(feed) ? feed.toString('hex') : feed);
-        const trPromise = this.core.startTransaction(feed);
+        const trPromise = this.core.transaction(feed);
         const vertex = trPromise.then(tr => {
             const v = this.core.getInTransaction(id, this.codec, tr, feed);
             transactions.set(feed, tr);

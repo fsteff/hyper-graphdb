@@ -21,10 +21,7 @@ export class Core {
 
     async get<T>(feed: string | Buffer, id: number | string, contentEncoding : string | codecs.BaseCodec<T>): Promise<Vertex<T>> {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
-        const store = await this.getStore(feed)
-        const obj = await store.transaction(tr => {
-            return tr.get(vertexId)
-        })
+        const obj = await this.transaction(feed, tr => tr.get(vertexId))
         const vertex = Vertex.decode<T>(obj, contentEncoding)
         vertex.setId(vertexId)
         vertex.setFeed(this.feedId(feed))
@@ -48,8 +45,7 @@ export class Core {
 
     async putAll<T>(feed: string | Buffer, vertices: Array<Vertex<T>>) {
         const ids = new Array<{vertex: Vertex<T>, id: {id?: number}}>()
-        const store = await this.getStore(feed)
-        await store.transaction(async tr => {
+        await this.transaction(feed, async tr => {
             for(const vertex of vertices) {
                 const encoded = vertex.encode()
                 if(vertex.getId() < 0) {
@@ -116,12 +112,19 @@ export class Core {
         }
     }
 
-    async startTransaction(feed: string) {
+    async transaction(feed: string|Buffer, exec?: (tr: Transaction) => any) {
         const store = await this.getStore(feed)
         await store.storage.ready()
         const head = await store.feed.length()
         const tr = new Transaction(store.storage, head)
         await tr.ready()
+
+        if(exec) {
+            const retval = await exec(tr)
+            await tr.commit()
+            return retval
+        }
+
         return tr
     }
 }

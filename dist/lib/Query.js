@@ -65,7 +65,7 @@ class Query {
         if (this.transactions.has(feed))
             return this.transactions.get(feed);
         else
-            return this.db.startTransaction(feed);
+            return this.db.transaction(feed);
     }
     async resultReductor(arr, vertices) {
         return (await vertices).concat(arr ? await arr : []);
