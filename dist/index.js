@@ -3,16 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HyperGraphDB = exports.SimpleGraphObject = exports.GraphObject = exports.Vertex = void 0;
+exports.HyperGraphDB = exports.Generator = exports.Crawler = exports.Query = exports.Core = exports.SimpleGraphObject = exports.GraphObject = exports.Vertex = void 0;
 const Core_1 = require("./lib/Core");
+Object.defineProperty(exports, "Core", { enumerable: true, get: function () { return Core_1.Core; } });
 const Codec_1 = require("./lib/Codec");
 Object.defineProperty(exports, "SimpleGraphObject", { enumerable: true, get: function () { return Codec_1.SimpleGraphObject; } });
 Object.defineProperty(exports, "GraphObject", { enumerable: true, get: function () { return Codec_1.GraphObject; } });
 const Vertex_1 = require("./lib/Vertex");
 Object.defineProperty(exports, "Vertex", { enumerable: true, get: function () { return Vertex_1.Vertex; } });
 const Crawler_1 = __importDefault(require("./lib/Crawler"));
+exports.Crawler = Crawler_1.default;
 const Query_1 = require("./lib/Query");
+Object.defineProperty(exports, "Query", { enumerable: true, get: function () { return Query_1.Query; } });
 const Generator_1 = require("./lib/Generator");
+Object.defineProperty(exports, "Generator", { enumerable: true, get: function () { return Generator_1.Generator; } });
 class HyperGraphDB {
     constructor(corestore, key, opts, customCore) {
         this.codec = new Codec_1.Codec();

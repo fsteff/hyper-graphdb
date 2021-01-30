@@ -1,11 +1,11 @@
 import Messages from '../messages'
 import codecs from 'codecs'
 
-export type Edge = {ref: number, feed?: Buffer, label: string, metadata?: Map<string, Buffer>}
+export type Edge = {ref: number, feed?: Buffer, label: string, metadata?: Object}
 export class Vertex<T> {
     private id: number
     private content?: Buffer
-    private metadata?: Map<string, Buffer>
+    private metadata?: Object
     private edges: Array<Edge>
     private codec: codecs.BaseCodec<T>
     private feed?: string
@@ -35,9 +35,9 @@ export class Vertex<T> {
         this.content = this.codec.encode(content)
     }
 
-    getMetadata(key?: string) : Buffer | Map<string, Buffer> | null {
+    getMetadata(key?: string) : Buffer | Object | null {
         if(!this.metadata) return null
-        if(key) return this.metadata.get(key) || null
+        if(key) return this.metadata[key]
         else return this.metadata
     }
 
@@ -47,7 +47,7 @@ export class Vertex<T> {
 
     setMetadata(key: string, value: Buffer) {
         if(!this.metadata) this.metadata = new Map<string, Buffer>()
-        this.metadata.set(key, value)
+        this.metadata[key] = value
     }
 
     getId() : number {
@@ -71,7 +71,7 @@ export class Vertex<T> {
         this.edges.push(edge)
     }
 
-    addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Map<string, Buffer>) {
+    addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Object) {
         if(vertex.getId() < 0) throw new Error('Referenced vertex has no id')
         // get feed from vertex
         if(!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')

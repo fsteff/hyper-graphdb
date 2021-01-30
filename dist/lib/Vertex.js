@@ -36,7 +36,7 @@ class Vertex {
         if (!this.metadata)
             return null;
         if (key)
-            return this.metadata.get(key) || null;
+            return this.metadata[key];
         else
             return this.metadata;
     }
@@ -46,7 +46,7 @@ class Vertex {
     setMetadata(key, value) {
         if (!this.metadata)
             this.metadata = new Map();
-        this.metadata.set(key, value);
+        this.metadata[key] = value;
     }
     getId() {
         return this.id;
