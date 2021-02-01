@@ -2,6 +2,7 @@ import codecs from 'codecs'
 import { Transaction } from 'hyperobjects'
 import { Feed, HyperObjects } from 'hyperobjects'
 import { Vertex } from './Vertex'
+import { VertexDecodingError } from './Errors'
 
 export type RWFunction = (data: Buffer, feed: Buffer, index: number) => Buffer
 export type DBOpts = {onRead: RWFunction, onWrite: RWFunction}
@@ -22,10 +23,14 @@ export class Core {
     async get<T>(feed: string | Buffer, id: number | string, contentEncoding : string | codecs.BaseCodec<T>): Promise<Vertex<T>> {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
         const obj = await this.transaction(feed, tr => tr.get(vertexId))
-        const vertex = Vertex.decode<T>(obj, contentEncoding)
-        vertex.setId(vertexId)
-        vertex.setFeed(this.feedId(feed))
-        return vertex
+        try {
+            const vertex = Vertex.decode<T>(obj, contentEncoding)
+            vertex.setId(vertexId)
+            vertex.setFeed(this.feedId(feed))
+            return vertex
+        } catch (err) {
+            throw new VertexDecodingError(vertexId, err)
+        }
     }
 
     async getInTransaction<T>(id: number | string, contentEncoding : string | codecs.BaseCodec<T>, tr: Transaction, feed: string) : Promise<Vertex<T>> {
@@ -36,7 +41,7 @@ export class Core {
             vertex.setId(vertexId)
             vertex.setFeed(feed)
             return vertex
-        })
+        }).catch(err => { throw new VertexDecodingError(vertexId, err) })
     }
 
     async put<T>(feed: string | Buffer, vertex: Vertex<T>) {

@@ -4,6 +4,7 @@ exports.Core = void 0;
 const hyperobjects_1 = require("hyperobjects");
 const hyperobjects_2 = require("hyperobjects");
 const Vertex_1 = require("./Vertex");
+const Errors_1 = require("./Errors");
 class Core {
     constructor(corestore, key, opts) {
         this.objectStores = new Map();
@@ -14,10 +15,15 @@ class Core {
     async get(feed, id, contentEncoding) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
         const obj = await this.transaction(feed, tr => tr.get(vertexId));
-        const vertex = Vertex_1.Vertex.decode(obj, contentEncoding);
-        vertex.setId(vertexId);
-        vertex.setFeed(this.feedId(feed));
-        return vertex;
+        try {
+            const vertex = Vertex_1.Vertex.decode(obj, contentEncoding);
+            vertex.setId(vertexId);
+            vertex.setFeed(this.feedId(feed));
+            return vertex;
+        }
+        catch (err) {
+            throw new Errors_1.VertexDecodingError(vertexId, err);
+        }
     }
     async getInTransaction(id, contentEncoding, tr, feed) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
@@ -27,7 +33,7 @@ class Core {
             vertex.setId(vertexId);
             vertex.setFeed(feed);
             return vertex;
-        });
+        }).catch(err => { throw new Errors_1.VertexDecodingError(vertexId, err); });
     }
     async put(feed, vertex) {
         return this.putAll(feed, [vertex]);

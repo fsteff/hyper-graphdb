@@ -27,7 +27,7 @@
     "@types/streamx": "^2.9.0",
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
-    "hyperobjects": "^0.1.2",
+    "hyperobjects": "^0.2.1",
     "streamx": "^2.10.1"
   },
   "devDependencies": {

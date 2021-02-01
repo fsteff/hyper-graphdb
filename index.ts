@@ -6,8 +6,9 @@ import { Index } from './lib/Index'
 import { Query, VertexQuery } from './lib/Query'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
+import * as Errors from './lib/Errors'
 
-export {Vertex, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator}
+export {Vertex, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors}
 export class HyperGraphDB {
     readonly core: Core
     readonly crawler: Crawler
