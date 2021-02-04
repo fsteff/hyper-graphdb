@@ -7,8 +7,9 @@ exports.Vertex = void 0;
 const messages_1 = __importDefault(require("../messages"));
 const codecs_1 = __importDefault(require("codecs"));
 class Vertex {
-    constructor(contentEncoding, data) {
+    constructor(contentEncoding, data, version) {
         this.id = -1;
+        this.version = version;
         if (data) {
             this.content = data.content;
             this.edges = data.edges || [];
@@ -75,7 +76,7 @@ class Vertex {
         // if the referenced vertex is in the same feed, we don't need to store that
         if (feed === null || feed === void 0 ? void 0 : feed.equals(Buffer.from(this.getFeed(), 'hex')))
             feed = undefined;
-        this.edges.push({ ref: vertex.getId(), label, feed, metadata });
+        this.edges.push({ ref: vertex.getId(), label, feed, version: vertex.version, metadata });
     }
     removeEdge(ref) {
         let predicate;
@@ -92,14 +93,20 @@ class Vertex {
     encode() {
         return messages_1.default.Vertex.encode(this);
     }
-    static decode(buf, contentEncoding) {
-        return new Vertex(contentEncoding, messages_1.default.Vertex.decode(buf));
+    static decode(buf, contentEncoding, version) {
+        return new Vertex(contentEncoding, messages_1.default.Vertex.decode(buf), version);
     }
     getFeed() {
         return this.feed;
     }
     setFeed(feed) {
         this.feed = feed;
+    }
+    getVersion() {
+        return this.version;
+    }
+    setVersion(version) {
+        this.version = version;
     }
 }
 exports.Vertex = Vertex;

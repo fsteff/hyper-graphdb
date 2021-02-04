@@ -14,9 +14,9 @@ class Core {
     }
     async get(feed, id, contentEncoding) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
-        const obj = await this.transaction(feed, tr => tr.get(vertexId));
+        const { obj, version } = await this.transaction(feed, async (tr) => { return { obj: await tr.get(vertexId), version: await tr.getPreviousTransactionIndex() }; });
         try {
-            const vertex = Vertex_1.Vertex.decode(obj, contentEncoding);
+            const vertex = Vertex_1.Vertex.decode(obj, contentEncoding, version);
             vertex.setId(vertexId);
             vertex.setFeed(this.feedId(feed));
             return vertex;
@@ -27,9 +27,10 @@ class Core {
     }
     async getInTransaction(id, contentEncoding, tr, feed) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
+        const version = await tr.getPreviousTransactionIndex();
         return tr.get(vertexId)
             .then(obj => {
-            const vertex = Vertex_1.Vertex.decode(obj, contentEncoding);
+            const vertex = Vertex_1.Vertex.decode(obj, contentEncoding, version);
             vertex.setId(vertexId);
             vertex.setFeed(feed);
             return vertex;
@@ -40,7 +41,9 @@ class Core {
     }
     async putAll(feed, vertices) {
         const ids = new Array();
+        let trans;
         await this.transaction(feed, async (tr) => {
+            trans = tr;
             for (const vertex of vertices) {
                 const encoded = vertex.encode();
                 if (vertex.getId() < 0) {
@@ -52,9 +55,11 @@ class Core {
                 }
             }
         });
+        const version = await (trans === null || trans === void 0 ? void 0 : trans.getPreviousTransactionIndex());
         for (const { vertex, id } of ids) {
             vertex.setId(id === null || id === void 0 ? void 0 : id.id);
             vertex.setFeed(this.feedId(feed));
+            vertex.setVersion(version);
         }
     }
     async getDefaultFeedId() {

@@ -22,9 +22,9 @@ export class Core {
 
     async get<T>(feed: string | Buffer, id: number | string, contentEncoding : string | codecs.BaseCodec<T>): Promise<Vertex<T>> {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
-        const obj = await this.transaction(feed, tr => tr.get(vertexId))
+        const {obj, version} = await this.transaction(feed, async tr => {return {obj: await tr.get(vertexId), version: await tr.getPreviousTransactionIndex()}})
         try {
-            const vertex = Vertex.decode<T>(obj, contentEncoding)
+            const vertex = Vertex.decode<T>(obj, contentEncoding, version)
             vertex.setId(vertexId)
             vertex.setFeed(this.feedId(feed))
             return vertex
@@ -35,9 +35,10 @@ export class Core {
 
     async getInTransaction<T>(id: number | string, contentEncoding : string | codecs.BaseCodec<T>, tr: Transaction, feed: string) : Promise<Vertex<T>> {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
+        const version = await tr.getPreviousTransactionIndex()
         return tr.get(vertexId)
         .then(obj => {
-            const vertex = Vertex.decode<T>(obj, contentEncoding)
+            const vertex = Vertex.decode<T>(obj, contentEncoding, version)
             vertex.setId(vertexId)
             vertex.setFeed(feed)
             return vertex
@@ -50,7 +51,9 @@ export class Core {
 
     async putAll<T>(feed: string | Buffer, vertices: Array<Vertex<T>>) {
         const ids = new Array<{vertex: Vertex<T>, id: {id?: number}}>()
+        let trans: Transaction | undefined
         await this.transaction(feed, async tr => {
+            trans = tr
             for(const vertex of vertices) {
                 const encoded = vertex.encode()
                 if(vertex.getId() < 0) {
@@ -62,9 +65,11 @@ export class Core {
             }
         })
 
+        const version = await trans?.getPreviousTransactionIndex()
         for(const {vertex, id} of ids) {
             vertex.setId(<number>id?.id)
             vertex.setFeed(this.feedId(feed))
+            vertex.setVersion(version)
         }
     }
 

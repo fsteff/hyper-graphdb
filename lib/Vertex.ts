@@ -1,7 +1,7 @@
 import Messages from '../messages'
 import codecs from 'codecs'
 
-export type Edge = {ref: number, feed?: Buffer, label: string, metadata?: Object}
+export type Edge = {ref: number, feed?: Buffer, label: string, version?: number, metadata?: Object}
 export class Vertex<T> {
     private id: number
     private content?: Buffer
@@ -9,9 +9,11 @@ export class Vertex<T> {
     private edges: Array<Edge>
     private codec: codecs.BaseCodec<T>
     private feed?: string
+    private version?: number
 
-    constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: {id: number, content: Buffer, edges: Array<Edge>}) {
+    constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: {id: number, content: Buffer, edges: Array<Edge>}, version?: number) {
         this.id = -1
+        this.version = version
         if(data) {
             this.content = data.content
             this.edges = data.edges || []    
@@ -77,8 +79,7 @@ export class Vertex<T> {
         if(!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')
         // if the referenced vertex is in the same feed, we don't need to store that
         if(feed?.equals(Buffer.from(<string>this.getFeed(), 'hex'))) feed = undefined 
-        
-        this.edges.push({ref: vertex.getId(), label, feed, metadata})
+        this.edges.push({ref: vertex.getId(), label, feed, version: vertex.version, metadata})
     }
 
     removeEdge(ref: number | string | Edge | Array<Edge>) {
@@ -94,8 +95,8 @@ export class Vertex<T> {
         return Messages.Vertex.encode(this)
     }
 
-    static decode<T>(buf: Buffer, contentEncoding: string | codecs.BaseCodec<T>) : Vertex<T> {
-        return new Vertex(contentEncoding, Messages.Vertex.decode(buf))
+    static decode<T>(buf: Buffer, contentEncoding: string | codecs.BaseCodec<T>, version?: number) : Vertex<T> {
+        return new Vertex(contentEncoding, Messages.Vertex.decode(buf), version)
     }
 
     getFeed() : string | undefined{
@@ -104,5 +105,13 @@ export class Vertex<T> {
 
     setFeed(feed: string) {
         this.feed = feed
+    }
+
+    getVersion() {
+        return this.version
+    }
+
+    setVersion(version?: number) {
+        this.version = version
     }
 }
