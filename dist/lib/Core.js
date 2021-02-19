@@ -12,18 +12,11 @@ class Core {
         this.opts = opts;
         this.defaultFeed = this.getStore();
     }
-    async get(feed, id, contentEncoding) {
+    async get(feed, id, contentEncoding, version) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
-        const { obj, version } = await this.transaction(feed, async (tr) => { return { obj: await tr.get(vertexId), version: await tr.getPreviousTransactionIndex() }; });
-        try {
-            const vertex = Vertex_1.Vertex.decode(obj, contentEncoding, version);
-            vertex.setId(vertexId);
-            vertex.setFeed(this.feedId(feed));
-            return vertex;
-        }
-        catch (err) {
-            throw new Errors_1.VertexDecodingError(vertexId, err);
-        }
+        feed = this.feedId(feed);
+        const tr = await this.transaction(feed, undefined, version);
+        return this.getInTransaction(vertexId, contentEncoding, tr, feed);
     }
     async getInTransaction(id, contentEncoding, tr, feed) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
@@ -114,10 +107,10 @@ class Core {
             }
         }
     }
-    async transaction(feed, exec) {
+    async transaction(feed, exec, version) {
         const store = await this.getStore(feed);
         await store.storage.ready();
-        const head = await store.feed.length();
+        const head = version || await store.feed.length();
         const tr = new hyperobjects_1.Transaction(store.storage, head);
         await tr.ready();
         if (exec) {

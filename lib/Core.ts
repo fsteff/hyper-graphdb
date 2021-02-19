@@ -20,17 +20,11 @@ export class Core {
         this.defaultFeed = this.getStore()
     }
 
-    async get<T>(feed: string | Buffer, id: number | string, contentEncoding : string | codecs.BaseCodec<T>): Promise<Vertex<T>> {
+    async get<T>(feed: string | Buffer, id: number | string, contentEncoding : string | codecs.BaseCodec<T>, version?: number): Promise<Vertex<T>> {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
-        const {obj, version} = await this.transaction(feed, async tr => {return {obj: await tr.get(vertexId), version: await tr.getPreviousTransactionIndex()}})
-        try {
-            const vertex = Vertex.decode<T>(obj, contentEncoding, version)
-            vertex.setId(vertexId)
-            vertex.setFeed(this.feedId(feed))
-            return vertex
-        } catch (err) {
-            throw new VertexDecodingError(vertexId, err)
-        }
+        feed = this.feedId(feed)
+        const tr = await this.transaction(feed, undefined, version)
+        return this.getInTransaction(vertexId, contentEncoding, tr, feed)
     }
 
     async getInTransaction<T>(id: number | string, contentEncoding : string | codecs.BaseCodec<T>, tr: Transaction, feed: string) : Promise<Vertex<T>> {
@@ -122,10 +116,10 @@ export class Core {
         }
     }
 
-    async transaction(feed: string|Buffer, exec?: (tr: Transaction) => any) {
+    async transaction(feed: string|Buffer, exec?: (tr: Transaction) => any, version?: number) {
         const store = await this.getStore(feed)
         await store.storage.ready()
-        const head = await store.feed.length()
+        const head = version || await store.feed.length()
         const tr = new Transaction(store.storage, head)
         await tr.ready()
 
