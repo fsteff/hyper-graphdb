@@ -3,7 +3,7 @@ import Corestore from 'corestore'
 import tape from 'tape'
 import { Vertex } from '../lib/Vertex'
 import { HyperGraphDB } from '..'
-import { SimpleGraphObject } from '../lib/Codec'
+import { GraphObject, SimpleGraphObject } from '../lib/Codec'
 
 tape('query', async t => {
     const store = new Corestore(RAM)
@@ -96,4 +96,48 @@ tape('error handling', async t => {
         t.ok(err)
     })
     t.same(result.length, 0)
+})
+
+tape('path', async t => {
+    const store = new Corestore(RAM)
+    await store.ready()
+    const db = new HyperGraphDB(store)
+    const feed = await db.core.getDefaultFeedId()
+
+    const v1 = db.create<SimpleGraphObject>(), 
+          v2 = db.create<SimpleGraphObject>(),
+          v3 = db.create<SimpleGraphObject>()
+    v1.setContent(new SimpleGraphObject().set('greeting', 'hello'))
+    v2.setContent(new SimpleGraphObject().set('greeting', 'hola'))
+    v2.setContent(new SimpleGraphObject().set('greeting', 'salut'))
+    await db.put([v1, v2, v3])
+    v1.addEdgeTo(v2, 'a')
+    v1.addEdgeTo(v3, 'a')
+    v2.addEdgeTo(v3, 'b')
+    v3.addEdgeTo(v1, 'c')
+    await db.put([v1, v2, v3])
+
+    let results = await db.queryPathAtVertex('a', v1).generator().destruct()
+    resultsEqual(results, [v2, v3])
+
+    results = await db.queryPathAtVertex('a/b', v1).generator().destruct()
+    resultsEqual(results, [v3])
+
+    results = await db.queryPathAtVertex('\\a\\b', v1).generator().destruct()
+    resultsEqual(results, [v3])
+
+    results = await db.queryPathAtVertex('', v1).generator().destruct()
+    resultsEqual(results, [v1])
+
+    results = await db.queryPathAtVertex('c', v1).generator().destruct()
+    resultsEqual(results, [])
+
+    results = await db.queryPathAtVertex('a/b/c', v1).generator().destruct()
+    resultsEqual(results, [v1])
+
+    function resultsEqual(results: Vertex<GraphObject>[], expected: Vertex<GraphObject>[]) {
+        let resIds = results.map(v => v.getId()).sort()
+        let expIds = expected.map(v => v.getId()).sort()
+        t.same(resIds, expIds)
+    }
 })

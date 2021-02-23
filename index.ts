@@ -79,4 +79,13 @@ export class HyperGraphDB {
         return this.queryAtId(vertex.getId(), <string> vertex.getFeed())
     }
 
+    queryPathAtVertex<T extends GraphObject>(path: string, vertex: Vertex<T>) {
+        const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
+        let last = this.queryAtVertex(vertex)
+        for(const next of parts) {
+            last = last.out(next)
+        }
+        return last
+    }
+
 }

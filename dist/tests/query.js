@@ -85,4 +85,37 @@ tape_1.default('error handling', async (t) => {
     });
     t.same(result.length, 0);
 });
+tape_1.default('path', async (t) => {
+    const store = new corestore_1.default(random_access_memory_1.default);
+    await store.ready();
+    const db = new __1.HyperGraphDB(store);
+    const feed = await db.core.getDefaultFeedId();
+    const v1 = db.create(), v2 = db.create(), v3 = db.create();
+    v1.setContent(new Codec_1.SimpleGraphObject().set('greeting', 'hello'));
+    v2.setContent(new Codec_1.SimpleGraphObject().set('greeting', 'hola'));
+    v2.setContent(new Codec_1.SimpleGraphObject().set('greeting', 'salut'));
+    await db.put([v1, v2, v3]);
+    v1.addEdgeTo(v2, 'a');
+    v1.addEdgeTo(v3, 'a');
+    v2.addEdgeTo(v3, 'b');
+    v3.addEdgeTo(v1, 'c');
+    await db.put([v1, v2, v3]);
+    let results = await db.queryPathAtVertex('a', v1).generator().destruct();
+    resultsEqual(results, [v2, v3]);
+    results = await db.queryPathAtVertex('a/b', v1).generator().destruct();
+    resultsEqual(results, [v3]);
+    results = await db.queryPathAtVertex('\\a\\b', v1).generator().destruct();
+    resultsEqual(results, [v3]);
+    results = await db.queryPathAtVertex('', v1).generator().destruct();
+    resultsEqual(results, [v1]);
+    results = await db.queryPathAtVertex('c', v1).generator().destruct();
+    resultsEqual(results, []);
+    results = await db.queryPathAtVertex('a/b/c', v1).generator().destruct();
+    resultsEqual(results, [v1]);
+    function resultsEqual(results, expected) {
+        let resIds = results.map(v => v.getId()).sort();
+        let expIds = expected.map(v => v.getId()).sort();
+        t.same(resIds, expIds);
+    }
+});
 //# sourceMappingURL=query.js.map

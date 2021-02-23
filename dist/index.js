@@ -98,6 +98,14 @@ class HyperGraphDB {
     queryAtVertex(vertex) {
         return this.queryAtId(vertex.getId(), vertex.getFeed());
     }
+    queryPathAtVertex(path, vertex) {
+        const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0);
+        let last = this.queryAtVertex(vertex);
+        for (const next of parts) {
+            last = last.out(next);
+        }
+        return last;
+    }
 }
 exports.HyperGraphDB = HyperGraphDB;
 //# sourceMappingURL=index.js.map
