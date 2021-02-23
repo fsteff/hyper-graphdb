@@ -10,6 +10,7 @@ export class Vertex<T> {
     private codec: codecs.BaseCodec<T>
     private feed?: string
     private version?: number
+    private timestamp?: number
 
     constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: {id: number, content: Buffer, edges: Array<Edge>}, version?: number) {
         this.id = -1
@@ -113,5 +114,13 @@ export class Vertex<T> {
 
     setVersion(version?: number) {
         this.version = version
+    }
+
+    getTimestamp() {
+        return this.timestamp
+    }
+
+    setTimestamp(timestamp?: number) {
+        this.timestamp = timestamp
     }
 }

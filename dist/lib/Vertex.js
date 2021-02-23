@@ -108,6 +108,12 @@ class Vertex {
     setVersion(version) {
         this.version = version;
     }
+    getTimestamp() {
+        return this.timestamp;
+    }
+    setTimestamp(timestamp) {
+        this.timestamp = timestamp;
+    }
 }
 exports.Vertex = Vertex;
 //# sourceMappingURL=Vertex.js.map

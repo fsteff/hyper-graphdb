@@ -49,10 +49,12 @@ class Core {
             }
         });
         const version = await (trans === null || trans === void 0 ? void 0 : trans.getPreviousTransactionIndex());
+        const marker = await (trans === null || trans === void 0 ? void 0 : trans.getPreviousTransactionMarker());
         for (const { vertex, id } of ids) {
             vertex.setId(id === null || id === void 0 ? void 0 : id.id);
             vertex.setFeed(this.feedId(feed));
             vertex.setVersion(version);
+            vertex.setTimestamp(marker === null || marker === void 0 ? void 0 : marker.timestamp);
         }
     }
     async getDefaultFeedId() {

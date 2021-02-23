@@ -60,10 +60,12 @@ export class Core {
         })
 
         const version = await trans?.getPreviousTransactionIndex()
+        const marker = await trans?.getPreviousTransactionMarker()
         for(const {vertex, id} of ids) {
             vertex.setId(<number>id?.id)
             vertex.setFeed(this.feedId(feed))
             vertex.setVersion(version)
+            vertex.setTimestamp(marker?.timestamp)
         }
     }
 
