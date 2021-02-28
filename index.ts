@@ -88,4 +88,8 @@ export class HyperGraphDB {
         return last
     }
 
+    async createEdgesToPath<T extends GraphObject, K extends GraphObject>(path: string, root: Vertex<T>,vertex: Vertex<K>) {
+        const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
+        const store = await this.core.getStore(root.getFeed())
+    }
 }

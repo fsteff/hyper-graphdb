@@ -21,11 +21,14 @@ class Core {
     async getInTransaction(id, contentEncoding, tr, feed) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;
         const version = await tr.getPreviousTransactionIndex();
+        const timestamp = (await tr.getPreviousTransactionMarker()).timestamp;
         return tr.get(vertexId)
             .then(obj => {
             const vertex = Vertex_1.Vertex.decode(obj, contentEncoding, version);
             vertex.setId(vertexId);
             vertex.setFeed(feed);
+            vertex.setWriteable(tr.store.writeable);
+            vertex.setTimestamp(timestamp);
             return vertex;
         }).catch(err => { throw new Errors_1.VertexDecodingError(vertexId, err); });
     }
@@ -55,6 +58,7 @@ class Core {
             vertex.setFeed(this.feedId(feed));
             vertex.setVersion(version);
             vertex.setTimestamp(marker === null || marker === void 0 ? void 0 : marker.timestamp);
+            vertex.setWriteable(true);
         }
     }
     async getDefaultFeedId() {

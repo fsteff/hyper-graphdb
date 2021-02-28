@@ -30,11 +30,14 @@ export class Core {
     async getInTransaction<T>(id: number | string, contentEncoding : string | codecs.BaseCodec<T>, tr: Transaction, feed: string) : Promise<Vertex<T>> {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : <number> id
         const version = await tr.getPreviousTransactionIndex()
+        const timestamp = (await tr.getPreviousTransactionMarker()).timestamp
         return tr.get(vertexId)
         .then(obj => {
             const vertex = Vertex.decode<T>(obj, contentEncoding, version)
             vertex.setId(vertexId)
             vertex.setFeed(feed)
+            vertex.setWriteable(tr.store.writeable)
+            vertex.setTimestamp(timestamp)
             return vertex
         }).catch(err => { throw new VertexDecodingError(vertexId, err) })
     }
@@ -66,6 +69,7 @@ export class Core {
             vertex.setFeed(this.feedId(feed))
             vertex.setVersion(version)
             vertex.setTimestamp(marker?.timestamp)
+            vertex.setWriteable(true)
         }
     }
 

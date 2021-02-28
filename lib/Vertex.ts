@@ -1,7 +1,7 @@
 import Messages from '../messages'
 import codecs from 'codecs'
 
-export type Edge = {ref: number, feed?: Buffer, label: string, version?: number, metadata?: Object}
+export type Edge = { ref: number, feed?: Buffer, label: string, version?: number, metadata?: Object }
 export class Vertex<T> {
     private id: number
     private content?: Buffer
@@ -11,26 +11,28 @@ export class Vertex<T> {
     private feed?: string
     private version?: number
     private timestamp?: number
+    private writeable: boolean
 
-    constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: {id: number, content: Buffer, edges: Array<Edge>}, version?: number) {
+    constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: { id: number, content: Buffer, edges: Array<Edge> }, version?: number) {
         this.id = -1
         this.version = version
-        if(data) {
+        if (data) {
             this.content = data.content
-            this.edges = data.edges || []    
+            this.edges = data.edges || []
         } else {
             this.edges = []
         }
-        
-        if(typeof contentEncoding === 'string') {
+
+        if (typeof contentEncoding === 'string') {
             this.codec = codecs(contentEncoding)
         } else {
-             this.codec = contentEncoding
-         }
+            this.codec = contentEncoding
+        }
+        this.writeable = false
     }
 
-    getContent() : T | null {
-        if(this.content) return this.codec.decode(this.content)
+    getContent(): T | null {
+        if (this.content) return this.codec.decode(this.content)
         else return null
     }
 
@@ -38,9 +40,9 @@ export class Vertex<T> {
         this.content = this.codec.encode(content)
     }
 
-    getMetadata(key?: string) : Buffer | Object | null {
-        if(!this.metadata) return null
-        if(key) return this.metadata[key]
+    getMetadata(key?: string): Buffer | Object | null {
+        if (!this.metadata) return null
+        if (key) return this.metadata[key]
         else return this.metadata
     }
 
@@ -49,11 +51,11 @@ export class Vertex<T> {
     }
 
     setMetadata(key: string, value: Buffer) {
-        if(!this.metadata) this.metadata = new Map<string, Buffer>()
+        if (!this.metadata) this.metadata = new Map<string, Buffer>()
         this.metadata[key] = value
     }
 
-    getId() : number {
+    getId(): number {
         return this.id
     }
 
@@ -61,8 +63,8 @@ export class Vertex<T> {
         this.id = id
     }
 
-    getEdges(label?: string) : Array<Edge> {
-        if(label) return this.edges.filter(e => e.label === label)
+    getEdges(label?: string): Array<Edge> {
+        if (label) return this.edges.filter(e => e.label === label)
         else return this.edges
     }
 
@@ -75,12 +77,12 @@ export class Vertex<T> {
     }
 
     addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Object) {
-        if(vertex.getId() < 0) throw new Error('Referenced vertex has no id')
+        if (vertex.getId() < 0) throw new Error('Referenced vertex has no id')
         // get feed from vertex
-        if(!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')
+        if (!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')
         // if the referenced vertex is in the same feed, we don't need to store that
-        if(feed?.equals(Buffer.from(<string>this.getFeed(), 'hex'))) feed = undefined 
-        this.edges.push({ref: vertex.getId(), label, feed, version: vertex.version, metadata})
+        if (feed?.equals(Buffer.from(<string>this.getFeed(), 'hex'))) feed = undefined
+        this.edges.push({ ref: vertex.getId(), label, feed, version: vertex.version, metadata })
     }
 
     removeEdge(ref: number | string | Edge | Array<Edge>) {
@@ -96,11 +98,11 @@ export class Vertex<T> {
         return Messages.Vertex.encode(this)
     }
 
-    static decode<T>(buf: Buffer, contentEncoding: string | codecs.BaseCodec<T>, version?: number) : Vertex<T> {
+    static decode<T>(buf: Buffer, contentEncoding: string | codecs.BaseCodec<T>, version?: number): Vertex<T> {
         return new Vertex(contentEncoding, Messages.Vertex.decode(buf), version)
     }
 
-    getFeed() : string | undefined{
+    getFeed(): string | undefined {
         return this.feed
     }
 
@@ -122,5 +124,13 @@ export class Vertex<T> {
 
     setTimestamp(timestamp?: number) {
         this.timestamp = timestamp
+    }
+
+    getWriteable() {
+        return this.writeable
+    }
+
+    setWriteable(writeable: boolean) {
+        this.writeable = writeable
     }
 }

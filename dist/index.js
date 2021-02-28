@@ -106,6 +106,10 @@ class HyperGraphDB {
         }
         return last;
     }
+    async createEdgesToPath(path, root, vertex) {
+        const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0);
+        const store = await this.core.getStore(root.getFeed());
+    }
 }
 exports.HyperGraphDB = HyperGraphDB;
 //# sourceMappingURL=index.js.map
