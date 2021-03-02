@@ -27,7 +27,7 @@ class Core {
             const vertex = Vertex_1.Vertex.decode(obj, contentEncoding, version);
             vertex.setId(vertexId);
             vertex.setFeed(feed);
-            vertex.setWriteable(tr.store.writeable);
+            vertex.setWritable(tr.store.writable);
             vertex.setTimestamp(timestamp);
             return vertex;
         }).catch(err => { throw new Errors_1.VertexDecodingError(vertexId, err); });
@@ -58,7 +58,7 @@ class Core {
             vertex.setFeed(this.feedId(feed));
             vertex.setVersion(version);
             vertex.setTimestamp(marker === null || marker === void 0 ? void 0 : marker.timestamp);
-            vertex.setWriteable(true);
+            vertex.setWritable(true);
         }
     }
     async getDefaultFeedId() {

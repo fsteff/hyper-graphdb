@@ -141,3 +141,46 @@ tape('path', async t => {
         t.same(resIds, expIds)
     }
 })
+
+tape('createEdgesToPath', async t => {
+    const store = new Corestore(RAM)
+    await store.ready()
+    const db = new HyperGraphDB(store)
+    const db2 = new HyperGraphDB(store)
+    const feed = await db.core.getDefaultFeedId()
+
+    const v1 = db.create<SimpleGraphObject>(), 
+          v2 = db.create<SimpleGraphObject>()
+    await db.put([v1, v2])
+
+    const v21 = db.create<SimpleGraphObject>(), 
+          v22 = db.create<SimpleGraphObject>(),
+          v23 = db.create<SimpleGraphObject>()
+    v23.setContent(new SimpleGraphObject().set('file', 'b'))
+    await db2.put([v21, v22, v23])
+
+    v1.addEdgeTo(v2, 'a')
+    v1.addEdgeTo(v21, 'a')
+    await db.put(v1)
+
+    v21.addEdgeTo(v22, 'b')
+    v22.addEdgeTo(v23, 'c')
+    await db2.put([v21, v22])
+
+    const result = await db.createEdgesToPath('a/b/c', v1)
+    t.same(result.length, 2)
+    const v3 = result[1]
+    v3.setContent(new SimpleGraphObject().set('file', 'a'))
+    await db.put(v3)
+
+    const vertices = await db.queryPathAtVertex('a/b/c', v1).generator().destruct(err => t.fail(err))
+    t.same(vertices.length, 2)
+    resultsEqual(vertices, [v23, result[1]])
+
+
+    function resultsEqual(results: Vertex<GraphObject>[], expected: Vertex<GraphObject>[]) {
+        let resIds = results.map(v => v.getId()).sort()
+        let expIds = expected.map(v => v.getId()).sort()
+        t.same(resIds, expIds)
+    }
+})

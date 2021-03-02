@@ -118,4 +118,35 @@ tape_1.default('path', async (t) => {
         t.same(resIds, expIds);
     }
 });
+tape_1.default('createEdgesToPath', async (t) => {
+    const store = new corestore_1.default(random_access_memory_1.default);
+    await store.ready();
+    const db = new __1.HyperGraphDB(store);
+    const db2 = new __1.HyperGraphDB(store);
+    const feed = await db.core.getDefaultFeedId();
+    const v1 = db.create(), v2 = db.create();
+    await db.put([v1, v2]);
+    const v21 = db.create(), v22 = db.create(), v23 = db.create();
+    v23.setContent(new Codec_1.SimpleGraphObject().set('file', 'b'));
+    await db2.put([v21, v22, v23]);
+    v1.addEdgeTo(v2, 'a');
+    v1.addEdgeTo(v21, 'a');
+    await db.put(v1);
+    v21.addEdgeTo(v22, 'b');
+    v22.addEdgeTo(v23, 'c');
+    await db2.put([v21, v22]);
+    const result = await db.createEdgesToPath('a/b/c', v1);
+    t.same(result.length, 2);
+    const v3 = result[1];
+    v3.setContent(new Codec_1.SimpleGraphObject().set('file', 'a'));
+    await db.put(v3);
+    const vertices = await db.queryPathAtVertex('a/b/c', v1).generator().destruct(err => t.fail(err));
+    t.same(vertices.length, 2);
+    resultsEqual(vertices, [v23, result[1]]);
+    function resultsEqual(results, expected) {
+        let resIds = results.map(v => v.getId()).sort();
+        let expIds = expected.map(v => v.getId()).sort();
+        t.same(resIds, expIds);
+    }
+});
 //# sourceMappingURL=query.js.map

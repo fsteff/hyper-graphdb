@@ -36,7 +36,7 @@ export class Core {
             const vertex = Vertex.decode<T>(obj, contentEncoding, version)
             vertex.setId(vertexId)
             vertex.setFeed(feed)
-            vertex.setWriteable(tr.store.writeable)
+            vertex.setWritable(tr.store.writable)
             vertex.setTimestamp(timestamp)
             return vertex
         }).catch(err => { throw new VertexDecodingError(vertexId, err) })
@@ -69,7 +69,7 @@ export class Core {
             vertex.setFeed(this.feedId(feed))
             vertex.setVersion(version)
             vertex.setTimestamp(marker?.timestamp)
-            vertex.setWriteable(true)
+            vertex.setWritable(true)
         }
     }
 

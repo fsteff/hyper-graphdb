@@ -23,7 +23,7 @@ class Vertex {
         else {
             this.codec = contentEncoding;
         }
-        this.writeable = false;
+        this.writable = false;
     }
     getContent() {
         if (this.content)
@@ -116,10 +116,10 @@ class Vertex {
         this.timestamp = timestamp;
     }
     getWriteable() {
-        return this.writeable;
+        return this.writable;
     }
-    setWriteable(writeable) {
-        this.writeable = writeable;
+    setWritable(writable) {
+        this.writable = writable;
     }
 }
 exports.Vertex = Vertex;

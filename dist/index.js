@@ -106,9 +106,46 @@ class HyperGraphDB {
         }
         return last;
     }
-    async createEdgesToPath(path, root, vertex) {
+    async createEdgesToPath(path, root) {
+        const self = this;
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0);
-        const store = await this.core.getStore(root.getFeed());
+        if (!root.getWriteable())
+            throw new Error('passed root vertex has to be writeable');
+        const tr = await this.core.transaction(root.getFeed());
+        const feed = tr.store.key;
+        const created = new Array();
+        const route = new Array();
+        for (const next of parts) {
+            let current;
+            const edges = root.getEdges(next).filter(e => !e.feed || e.feed.equals(feed));
+            const vertices = await Promise.all(getVertices(edges));
+            if (vertices.length === 0) {
+                current = this.create();
+                created.push(current);
+                route.push({ parent: root, child: current, label: next });
+            }
+            else if (vertices.length === 1) {
+                current = vertices[0];
+            }
+            else {
+                current = vertices.sort(newest)[0];
+            }
+            root = current;
+        }
+        await this.put(created, feed);
+        const changes = new Array();
+        for (const v of route) {
+            v.parent.addEdgeTo(v.child, v.label);
+            changes.push(v.parent);
+        }
+        await this.put(changes, feed);
+        return created;
+        function getVertices(edges) {
+            return edges.map(e => self.core.getInTransaction(e.ref, 'binary', tr, feed.toString('hex')));
+        }
+        function newest(a, b) {
+            return (b.getTimestamp() || 0) - (a.getTimestamp() || 0);
+        }
     }
 }
 exports.HyperGraphDB = HyperGraphDB;

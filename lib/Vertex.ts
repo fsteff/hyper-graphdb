@@ -11,7 +11,7 @@ export class Vertex<T> {
     private feed?: string
     private version?: number
     private timestamp?: number
-    private writeable: boolean
+    private writable: boolean
 
     constructor(contentEncoding: string | codecs.BaseCodec<T>, data?: { id: number, content: Buffer, edges: Array<Edge> }, version?: number) {
         this.id = -1
@@ -28,7 +28,7 @@ export class Vertex<T> {
         } else {
             this.codec = contentEncoding
         }
-        this.writeable = false
+        this.writable = false
     }
 
     getContent(): T | null {
@@ -127,10 +127,10 @@ export class Vertex<T> {
     }
 
     getWriteable() {
-        return this.writeable
+        return this.writable
     }
 
-    setWriteable(writeable: boolean) {
-        this.writeable = writeable
+    setWritable(writable: boolean) {
+        this.writable = writable
     }
 }

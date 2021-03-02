@@ -1,6 +1,6 @@
 import { Core, DBOpts, Corestore } from './lib/Core'
 import { Codec, SimpleGraphObject, GraphObject } from './lib/Codec'
-import { Vertex } from './lib/Vertex'
+import { Edge, Vertex } from './lib/Vertex'
 import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
 import { Query, VertexQuery } from './lib/Query'
@@ -88,8 +88,46 @@ export class HyperGraphDB {
         return last
     }
 
-    async createEdgesToPath<T extends GraphObject, K extends GraphObject>(path: string, root: Vertex<T>,vertex: Vertex<K>) {
+    async createEdgesToPath<T extends GraphObject, K extends GraphObject>(path: string, root: Vertex<K>) {
+        const self = this
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
-        const store = await this.core.getStore(root.getFeed())
+        if(!root.getWriteable()) throw new Error('passed root vertex has to be writeable')
+        const tr = <Transaction> await this.core.transaction(<string>root.getFeed())
+        const feed = tr.store.key
+
+        const created = new Array<Vertex<T>>()
+        const route = new Array<{parent: Vertex<any>, child: Vertex<any>, label: string}>()
+        for (const next of parts) {
+            let current
+            const edges = root.getEdges(next).filter(e => !e.feed || e.feed.equals(feed))
+            const vertices = await Promise.all(getVertices(edges))
+            if(vertices.length === 0) {
+                current = this.create<T>()
+                created.push(current)
+                route.push({parent: root, child: current, label: next})
+            } else if (vertices.length === 1) {
+                current = vertices[0]
+            } else {
+                current = vertices.sort(newest)[0]
+            }
+            root = current
+        }
+
+        await this.put(created, feed)
+        const changes = new Array<Vertex<any>>()
+        for(const v of route) {
+           v.parent.addEdgeTo(v.child, v.label)
+           changes.push(v.parent)
+        }
+        await this.put(changes, feed)
+        return created
+       
+        function getVertices(edges: Edge[]) {
+            return edges.map(e => self.core.getInTransaction(e.ref, 'binary', tr, feed.toString('hex') ))
+        }
+
+        function newest(a: Vertex<any>, b: Vertex<any>) {
+            return (b.getTimestamp() || 0) - (a.getTimestamp() || 0)
+        }
     }
 }
