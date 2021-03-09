@@ -79,7 +79,7 @@ class Vertex {
         if (!feed && vertex.getFeed())
             feed = Buffer.from(vertex.getFeed(), 'hex');
         // if the referenced vertex is in the same feed, we don't need to store that
-        if (feed === null || feed === void 0 ? void 0 : feed.equals(Buffer.from(this.getFeed(), 'hex')))
+        if (feed && this.feed && feed.equals(Buffer.from(this.getFeed(), 'hex')))
             feed = undefined;
         this.edges.push({ ref: vertex.getId(), label, feed, version: vertex.version, metadata });
     }

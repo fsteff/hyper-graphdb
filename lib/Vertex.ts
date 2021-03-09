@@ -83,7 +83,7 @@ export class Vertex<T> {
         // get feed from vertex
         if (!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')
         // if the referenced vertex is in the same feed, we don't need to store that
-        if (feed?.equals(Buffer.from(<string>this.getFeed(), 'hex'))) feed = undefined
+        if (feed && this.feed && feed.equals(Buffer.from(<string>this.getFeed(), 'hex'))) feed = undefined
         this.edges.push({ ref: vertex.getId(), label, feed, version: vertex.version, metadata })
     }
 
