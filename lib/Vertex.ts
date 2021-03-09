@@ -4,7 +4,7 @@ import codecs from 'codecs'
 export type Edge = { ref: number, feed?: Buffer, label: string, version?: number, metadata?: Object }
 export class Vertex<T> {
     private id: number
-    private content?: Buffer
+    private content: Buffer | null
     private metadata?: Object
     private edges: Array<Edge>
     private codec: codecs.BaseCodec<T>
@@ -21,6 +21,7 @@ export class Vertex<T> {
             this.edges = data.edges || []
         } else {
             this.edges = []
+            this.content = null
         }
 
         if (typeof contentEncoding === 'string') {
@@ -36,8 +37,9 @@ export class Vertex<T> {
         else return null
     }
 
-    setContent(content: T) {
-        this.content = this.codec.encode(content)
+    setContent(content: T | null) {
+        if(content) this.content = this.codec.encode(content)
+        else this.content = null
     }
 
     getMetadata(key?: string): Buffer | Object | null {
@@ -95,6 +97,8 @@ export class Vertex<T> {
     }
 
     encode() {
+        const copy = Object.assign({}, this)
+        copy.content = copy.content || null
         return Messages.Vertex.encode(this)
     }
 

@@ -16,6 +16,7 @@ class Vertex {
         }
         else {
             this.edges = [];
+            this.content = null;
         }
         if (typeof contentEncoding === 'string') {
             this.codec = codecs_1.default(contentEncoding);
@@ -32,7 +33,10 @@ class Vertex {
             return null;
     }
     setContent(content) {
-        this.content = this.codec.encode(content);
+        if (content)
+            this.content = this.codec.encode(content);
+        else
+            this.content = null;
     }
     getMetadata(key) {
         if (!this.metadata)
@@ -92,6 +96,8 @@ class Vertex {
         this.edges = this.edges.filter(predicate);
     }
     encode() {
+        const copy = Object.assign({}, this);
+        copy.content = copy.content || null;
         return messages_1.default.Vertex.encode(this);
     }
     static decode(buf, contentEncoding, version) {

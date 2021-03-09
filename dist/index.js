@@ -146,8 +146,11 @@ class HyperGraphDB {
         }
         if (leaf) {
             const last = changes.length > 0 ? changes[changes.length - 1] : root;
-            last.addEdgeTo(leaf, leafName);
-            changes.push(last);
+            const matchingEdge = last.getEdges(leafName).find(e => (!Buffer.isBuffer(e.feed) || feed.equals(e.feed)) && e.ref === leaf.getId());
+            if (!matchingEdge) {
+                last.addEdgeTo(leaf, leafName);
+                changes.push(last);
+            }
         }
         await this.put(changes, feed);
         return route;

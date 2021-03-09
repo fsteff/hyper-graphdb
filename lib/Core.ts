@@ -6,7 +6,10 @@ import { VertexDecodingError } from './Errors'
 
 export type RWFunction = (data: Buffer, feed: Buffer, index: number) => Buffer
 export type DBOpts = {onRead: RWFunction, onWrite: RWFunction}
-export type Corestore = {get: (opts?: {key?: string | Buffer}) => Feed}
+export interface Corestore  {
+    get(opts?: {key?: string | Buffer}): Feed,
+    namespace(name: string): Corestore
+}
 
 export class Core {
     private objectStores = new Map<string, HyperObjects>()
