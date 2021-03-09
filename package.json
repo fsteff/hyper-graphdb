@@ -27,7 +27,7 @@
     "@types/streamx": "^2.9.0",
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
-    "hyperobjects": "^0.2.3",
+    "hyperobjects": "^0.2.6",
     "protocol-buffers": "^4.2.0",
     "streamx": "^2.10.1"
   },

@@ -169,13 +169,13 @@ tape('createEdgesToPath', async t => {
 
     const result = await db.createEdgesToPath('a/b/c', v1)
     t.same(result.length, 2)
-    const v3 = result[1]
+    const v3 = result[1].child
     v3.setContent(new SimpleGraphObject().set('file', 'a'))
     await db.put(v3)
 
     const vertices = await db.queryPathAtVertex('a/b/c', v1).generator().destruct(err => t.fail(err))
     t.same(vertices.length, 2)
-    resultsEqual(vertices, [v23, result[1]])
+    resultsEqual(vertices, [v23, v3])
 
 
     function resultsEqual(results: Vertex<GraphObject>[], expected: Vertex<GraphObject>[]) {

@@ -88,23 +88,29 @@ export class HyperGraphDB {
         return last
     }
 
-    async createEdgesToPath<T extends GraphObject, K extends GraphObject>(path: string, root: Vertex<K>) {
+    async createEdgesToPath<K extends GraphObject, T extends GraphObject>(path: string, root: Vertex<K>, leaf?: Vertex<T>) {
         const self = this
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
+        let leafName = ''
+        if(leaf) {
+            leafName = parts.splice(parts.length-1, 1)[0]
+        }
         if(!root.getWriteable()) throw new Error('passed root vertex has to be writeable')
         const tr = <Transaction> await this.core.transaction(<string>root.getFeed())
         const feed = tr.store.key
 
-        const created = new Array<Vertex<T>>()
-        const route = new Array<{parent: Vertex<any>, child: Vertex<any>, label: string}>()
+        const created = new Array<Vertex<GraphObject>>()
+        const route = new Array<{parent: Vertex<GraphObject>, child: Vertex<GraphObject>, label: string, path: string}>()
+        let currentPath = ''
         for (const next of parts) {
             let current
+            currentPath += '/' + next
             const edges = root.getEdges(next).filter(e => !e.feed || e.feed.equals(feed))
             const vertices = await Promise.all(getVertices(edges))
             if(vertices.length === 0) {
                 current = this.create<T>()
                 created.push(current)
-                route.push({parent: root, child: current, label: next})
+                route.push({parent: root, child: current, label: next, path: currentPath})
             } else if (vertices.length === 1) {
                 current = vertices[0]
             } else {
@@ -119,11 +125,19 @@ export class HyperGraphDB {
            v.parent.addEdgeTo(v.child, v.label)
            changes.push(v.parent)
         }
+        if(leaf) {
+            const last = changes.length > 0 ? changes[changes.length-1] : root
+            const matchingEdge = last.getEdges(leafName).find(e => (!Buffer.isBuffer(e.feed) || feed.equals(e.feed)) && e.ref === leaf.getId())
+            if(!matchingEdge) {
+                last.addEdgeTo(leaf, leafName)
+                changes.push(last)
+            }
+        }
         await this.put(changes, feed)
-        return created
+        return route
        
         function getVertices(edges: Edge[]) {
-            return edges.map(e => self.core.getInTransaction(e.ref, 'binary', tr, feed.toString('hex') ))
+            return edges.map(e => self.core.getInTransaction(e.ref, self.codec, tr, feed.toString('hex') ))
         }
 
         function newest(a: Vertex<any>, b: Vertex<any>) {

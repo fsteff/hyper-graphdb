@@ -137,12 +137,12 @@ tape_1.default('createEdgesToPath', async (t) => {
     await db2.put([v21, v22]);
     const result = await db.createEdgesToPath('a/b/c', v1);
     t.same(result.length, 2);
-    const v3 = result[1];
+    const v3 = result[1].child;
     v3.setContent(new Codec_1.SimpleGraphObject().set('file', 'a'));
     await db.put(v3);
     const vertices = await db.queryPathAtVertex('a/b/c', v1).generator().destruct(err => t.fail(err));
     t.same(vertices.length, 2);
-    resultsEqual(vertices, [v23, result[1]]);
+    resultsEqual(vertices, [v23, v3]);
     function resultsEqual(results, expected) {
         let resIds = results.map(v => v.getId()).sort();
         let expIds = expected.map(v => v.getId()).sort();
