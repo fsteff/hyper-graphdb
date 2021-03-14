@@ -119,21 +119,27 @@ export class HyperGraphDB {
             root = current
         }
 
-        await this.put(created, feed)
+        if(created.length > 0) {
+            await this.put(created, feed)
+        }
+
         const changes = new Array<Vertex<any>>()
         for(const v of route) {
            v.parent.addEdgeTo(v.child, v.label)
            changes.push(v.parent)
         }
         if(leaf) {
-            const last = changes.length > 0 ? changes[changes.length-1] : root
+            const last = route.length > 0 ? route[route.length-1].child : root
             const matchingEdge = last.getEdges(leafName).find(e => (!Buffer.isBuffer(e.feed) || feed.equals(e.feed)) && e.ref === leaf.getId())
             if(!matchingEdge) {
                 last.addEdgeTo(leaf, leafName)
                 changes.push(last)
             }
         }
-        await this.put(changes, feed)
+
+        if(changes.length > 0) {
+            await this.put(changes, feed)
+        }
         return route
        
         function getVertices(edges: Edge[]) {
