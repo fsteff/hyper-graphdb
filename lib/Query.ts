@@ -17,7 +17,7 @@ export type VertexQueries<T> = Generator<VertexQuery<T>>
 export class Query<T> {
     private vertexQueries: VertexQueries<T>
     private db: Core
-    private transactions = new Map<string, Transaction>()
+    private transactions: Map<string, Transaction>
     private codec: Codec<T>
 
     constructor(db: Core, vertexQueries: VertexQueries<T>, transactions: Map<string, Transaction>, contentEncoding: Codec<T>) {

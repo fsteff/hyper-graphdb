@@ -2,7 +2,12 @@ import Messages from '../messages'
 import codecs from 'codecs'
 
 export type Edge = { ref: number, feed?: Buffer, label: string, version?: number, metadata?: Object }
-export class Vertex<T> {
+export interface IVertex<T> {
+    getContent(): T | null,
+    getEdges(label?: string): Edge[]
+}
+
+export class Vertex<T> implements IVertex<T> {
     private id: number
     private content: Buffer | null
     private metadata?: Object
