@@ -20,24 +20,23 @@ tape_1.default('query', async (t) => {
     v1.addEdgeTo(v2, 'child');
     v2.addEdgeTo(v1, 'parent');
     await db.put([v1, v2]);
-    let iter = db.queryAtId(v1.getId(), feed).out('child').vertices();
-    for await (const vertex of iter) {
-        t.same(v2.getId(), vertex.getId());
+    let iter = await db.queryAtId(v1.getId(), feed).out('child').vertices();
+    for (const vertex of iter) {
+        t.ok(v2.equals(vertex));
     }
     let results = await db.queryAtVertex(v1).out('child').matches(o => { var _a; return ((_a = o.getContent()) === null || _a === void 0 ? void 0 : _a.get('greeting')) === 'hola'; }).generator().destruct();
     t.same(1, results.length);
-    t.same(v2.getId(), results[0].getId());
+    t.ok(v2.equals(results[0]));
     results = await db.queryAtVertex(v1).out('child').matches(o => { var _a; return ((_a = o.getContent()) === null || _a === void 0 ? void 0 : _a.get('greeting')) === 'I`m grumpy'; }).generator().destruct();
     t.same(0, results.length);
     results = await db.queryAtVertex(v1).out('child').out('parent').generator().destruct();
     t.same(1, results.length);
-    t.same(v1.getId(), results[0].getId());
+    t.ok(v1.equals(results[0]));
 });
 tape_1.default('repeat query', async (t) => {
     const store = new corestore_1.default(random_access_memory_1.default);
     await store.ready();
     const db = new __1.HyperGraphDB(store);
-    const feed = await db.core.getDefaultFeedId();
     const v = new Array();
     for (let i = 0; i < 100; i++) {
         v[i] = db.create();
@@ -48,18 +47,18 @@ tape_1.default('repeat query', async (t) => {
         v[i].addEdgeTo(v[i + 1], 'next');
     }
     await db.put(v);
-    let results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).generator().destruct();
+    let results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).vertices();
     t.same(99, results.length);
-    t.same(v[1].getId(), results[0].getId());
+    t.ok(v[1].equals(results[0]));
     v[99].addEdgeTo(v[0], 'next');
     await db.put(v[99]);
     t.timeoutAfter(1000);
     results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).generator().destruct();
     t.same(100, results.length);
-    t.same(v[1].getId(), results[0].getId());
+    t.ok(v[1].equals(results[0]));
     results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), undefined, 10).generator().destruct();
     t.same(10, results.length);
-    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.getId() === v[10].getId()) < 0).generator().destruct();
+    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.equals(v[10])) < 0).generator().destruct();
     t.same(10, results.length);
 });
 tape_1.default('error handling', async (t) => {
@@ -89,7 +88,6 @@ tape_1.default('path', async (t) => {
     const store = new corestore_1.default(random_access_memory_1.default);
     await store.ready();
     const db = new __1.HyperGraphDB(store);
-    const feed = await db.core.getDefaultFeedId();
     const v1 = db.create(), v2 = db.create(), v3 = db.create();
     v1.setContent(new Codec_1.SimpleGraphObject().set('greeting', 'hello'));
     v2.setContent(new Codec_1.SimpleGraphObject().set('greeting', 'hola'));
@@ -113,9 +111,13 @@ tape_1.default('path', async (t) => {
     results = await db.queryPathAtVertex('a/b/c', v1).generator().destruct();
     resultsEqual(results, [v1]);
     function resultsEqual(results, expected) {
-        let resIds = results.map(v => v.getId()).sort();
-        let expIds = expected.map(v => v.getId()).sort();
-        t.same(resIds, expIds);
+        results = results.slice();
+        expected = expected.slice();
+        for (const v of results) {
+            let idx = expected.findIndex(e => e.equals(v));
+            t.ok(idx >= 0);
+            expected.splice(idx, 1);
+        }
     }
 });
 tape_1.default('createEdgesToPath', async (t) => {

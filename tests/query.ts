@@ -1,7 +1,7 @@
 import RAM from 'random-access-memory'
 import Corestore from 'corestore'
 import tape from 'tape'
-import { Vertex } from '../lib/Vertex'
+import { IVertex, Vertex } from '../lib/Vertex'
 import { HyperGraphDB } from '..'
 import { GraphObject, SimpleGraphObject } from '../lib/Codec'
 
@@ -19,28 +19,27 @@ tape('query', async t => {
     v2.addEdgeTo(v1, 'parent')
     await db.put([v1, v2])
 
-    let iter = db.queryAtId(v1.getId(), feed).out('child').vertices()
-    for await (const vertex of iter) {
-        t.same(v2.getId(), vertex.getId())
+    let iter = await db.queryAtId(v1.getId(), feed).out('child').vertices()
+    for (const vertex of iter) {
+        t.ok(v2.equals(vertex))
     }
 
-    let results = await db.queryAtVertex(v1).out('child').matches(o => (<Vertex<SimpleGraphObject>>o).getContent()?.get('greeting') === 'hola').generator().destruct()
+    let results = await db.queryAtVertex(v1).out('child').matches(o => (<IVertex<SimpleGraphObject>>o).getContent()?.get('greeting') === 'hola').generator().destruct()
     t.same(1, results.length)
-    t.same(v2.getId(), results[0].getId())
+    t.ok(v2.equals(results[0]))
 
-    results = await db.queryAtVertex(v1).out('child').matches(o => (<Vertex<SimpleGraphObject>>o).getContent()?.get('greeting') === 'I`m grumpy').generator().destruct()
+    results = await db.queryAtVertex(v1).out('child').matches(o => (<IVertex<SimpleGraphObject>>o).getContent()?.get('greeting') === 'I`m grumpy').generator().destruct()
     t.same(0, results.length)
 
     results = await db.queryAtVertex(v1).out('child').out('parent').generator().destruct()
     t.same(1, results.length)
-    t.same(v1.getId(), results[0].getId())
+    t.ok(v1.equals(results[0]))
 })
 
 tape('repeat query', async t => {
     const store = new Corestore(RAM)
     await store.ready()
     const db = new HyperGraphDB(store)
-    const feed = await db.core.getDefaultFeedId()
 
     const v = new Array<Vertex<SimpleGraphObject>>()
     for(let i = 0; i < 100; i++) {
@@ -54,9 +53,9 @@ tape('repeat query', async t => {
     }
     await db.put(v)
 
-    let results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).generator().destruct()
+    let results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).vertices()
     t.same(99, results.length)
-    t.same(v[1].getId(), results[0].getId())
+    t.ok(v[1].equals(results[0]))
 
     v[99].addEdgeTo(v[0], 'next')
     await db.put(v[99])
@@ -64,12 +63,12 @@ tape('repeat query', async t => {
     t.timeoutAfter(1000)
     results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).generator().destruct()
     t.same(100, results.length)
-    t.same(v[1].getId(), results[0].getId())
+    t.ok(v[1].equals(results[0]))
 
     results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), undefined, 10).generator().destruct()
     t.same(10, results.length)
 
-    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.getId() === v[10].getId()) < 0).generator().destruct()
+    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.equals(v[10])) < 0).generator().destruct()
     t.same(10, results.length)
 })
 
@@ -102,7 +101,6 @@ tape('path', async t => {
     const store = new Corestore(RAM)
     await store.ready()
     const db = new HyperGraphDB(store)
-    const feed = await db.core.getDefaultFeedId()
 
     const v1 = db.create<SimpleGraphObject>(), 
           v2 = db.create<SimpleGraphObject>(),
@@ -120,7 +118,7 @@ tape('path', async t => {
     let results = await db.queryPathAtVertex('a', v1).generator().destruct()
     resultsEqual(results, [v2, v3])
 
-    results = await db.queryPathAtVertex('a/b', v1).generator().destruct()
+    results =  await db.queryPathAtVertex('a/b', v1).generator().destruct()
     resultsEqual(results, [v3])
 
     results = await db.queryPathAtVertex('\\a\\b', v1).generator().destruct()
@@ -135,10 +133,14 @@ tape('path', async t => {
     results = await db.queryPathAtVertex('a/b/c', v1).generator().destruct()
     resultsEqual(results, [v1])
 
-    function resultsEqual(results: Vertex<GraphObject>[], expected: Vertex<GraphObject>[]) {
-        let resIds = results.map(v => v.getId()).sort()
-        let expIds = expected.map(v => v.getId()).sort()
-        t.same(resIds, expIds)
+    function resultsEqual(results: IVertex<GraphObject>[], expected: IVertex<GraphObject>[]) {
+        results = results.slice()
+        expected = expected.slice()
+        for(const v of results) {
+            let idx = expected.findIndex(e => e.equals(v))
+            t.ok(idx >= 0)
+            expected.splice(idx, 1)
+        }
     }
 })
 
@@ -173,7 +175,7 @@ tape('createEdgesToPath', async t => {
     v3.setContent(new SimpleGraphObject().set('file', 'a'))
     await db.put(v3)
 
-    const vertices = await db.queryPathAtVertex('a/b/c', v1).generator().destruct(err => t.fail(err))
+    const vertices = <Vertex<GraphObject>[]> await db.queryPathAtVertex('a/b/c', v1).generator().destruct(err => t.fail(err))
     t.same(vertices.length, 2)
     resultsEqual(vertices, [v23, v3])
 

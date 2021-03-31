@@ -4,7 +4,8 @@ import codecs from 'codecs'
 export type Edge = { ref: number, feed?: Buffer, label: string, version?: number, metadata?: Object }
 export interface IVertex<T> {
     getContent(): T | null,
-    getEdges(label?: string): Edge[]
+    getEdges(label?: string): Edge[],
+    equals<V>(other: IVertex<V>): boolean
 }
 
 export class Vertex<T> implements IVertex<T> {
@@ -141,5 +142,20 @@ export class Vertex<T> implements IVertex<T> {
 
     setWritable(writable: boolean) {
         this.writable = writable
+    }
+
+    equals<V>(other: IVertex<V>): boolean {
+        if(!other) return false
+        if(! (other instanceof Vertex)) return false
+        if(other.getFeed() !== this.getFeed()) return false
+        if(other.getId() !== this.getId()) return false
+
+        if(other.getVersion() !== this.getVersion()){
+            if (other.content === this.content) return true
+            if (Buffer.isBuffer(other.content) && Buffer.isBuffer(this.content) && other.content.equals(this.content)) return true
+            else return false
+        }
+        
+        return true
     }
 }

@@ -57,14 +57,22 @@ class Generator {
                     yield elem;
                 }
                 else {
-                    const arr = await self.wrapAsync(mapper, elem).catch(err => err);
-                    if (arr instanceof Error) {
-                        yield arr;
+                    let mapped = await self.wrapAsync(mapper, elem).catch(err => err);
+                    if (mapped instanceof Error) {
+                        yield mapped;
                     }
-                    else {
-                        for (const res of arr) {
+                    else if (mapped instanceof Generator) {
+                        for await (const res of mapped.gen) {
                             yield res;
                         }
+                    }
+                    else if (Array.isArray(mapped)) {
+                        for (const res of mapped) {
+                            yield res;
+                        }
+                    }
+                    else {
+                        yield new Error('mapper did not return Array or Generator');
                     }
                 }
             }

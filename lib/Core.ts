@@ -20,7 +20,7 @@ export class Core {
     constructor(corestore: Corestore, key?: string | Buffer, opts?: DBOpts) {
         this.corestore = corestore
         this.opts = opts
-        this.defaultFeed = this.getStore()
+        this.defaultFeed = this.getStore(key)
     }
 
     async get<T>(feed: string | Buffer, id: number | string, contentEncoding : string | codecs.BaseCodec<T>, version?: number): Promise<Vertex<T>> {

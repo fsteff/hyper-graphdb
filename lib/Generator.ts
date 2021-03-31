@@ -1,6 +1,5 @@
 import { Readable } from 'streamx'
 
-
 export class Generator<T> {
     private gen: AsyncGenerator<T | Error>
 
@@ -49,7 +48,7 @@ export class Generator<T> {
         }
     }
 
-    flatMap<V>(mapper: (elem: T) => (V[] | Promise<V[]>)) {
+    flatMap<V>(mapper: (elem: T) => (V[] | Promise<V[]> | Generator<V> | Promise<Generator<V>>)) {
         const self = this
         return new Generator<V>(map())
         async function* map() {
@@ -57,13 +56,19 @@ export class Generator<T> {
                 if (elem instanceof Error) {
                     yield elem
                 } else {
-                    const arr = await self.wrapAsync(mapper, elem).catch(err => err)
-                    if (arr instanceof Error) {
-                        yield arr
-                    } else {
-                        for (const res of arr) {
+                    let mapped: (Error | V[] | Generator<V> | AsyncGenerator<V>) = await self.wrapAsync(mapper, elem).catch(err => err)
+                    if (mapped instanceof Error) {
+                        yield mapped
+                    } else if(mapped instanceof Generator){
+                        for await (const res of mapped.gen) {
                             yield res
                         }
+                    } else if(Array.isArray(mapped)){
+                        for (const res of mapped) {
+                            yield res
+                        }
+                    } else {
+                        yield new Error('mapper did not return Array or Generator')
                     }
                 }
             }

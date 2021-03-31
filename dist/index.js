@@ -34,6 +34,7 @@ const Crawler_1 = __importDefault(require("./lib/Crawler"));
 exports.Crawler = Crawler_1.default;
 const Query_1 = require("./lib/Query");
 Object.defineProperty(exports, "Query", { enumerable: true, get: function () { return Query_1.Query; } });
+const GraphView_1 = require("./lib/GraphView");
 const Generator_1 = require("./lib/Generator");
 Object.defineProperty(exports, "Generator", { enumerable: true, get: function () { return Generator_1.Generator; } });
 const Errors = __importStar(require("./lib/Errors"));
@@ -80,9 +81,10 @@ class HyperGraphDB {
                 tr = Promise.resolve(transactions.get(feed));
             }
             const promise = tr.then(tr => this.core.getInTransaction(id, this.codec, tr, feed));
-            vertices.push({ feed, vertex: promise });
+            vertices.push(promise);
         }
-        return new Query_1.Query(this.core, Generator_1.Generator.from(vertices), transactions, this.codec);
+        const view = new GraphView_1.GraphView(this.core, this.codec, transactions);
+        return new Query_1.Query(view, Generator_1.Generator.from(vertices));
     }
     queryAtId(id, feed) {
         const transactions = new Map();
@@ -93,7 +95,8 @@ class HyperGraphDB {
             transactions.set(feed, tr);
             return v;
         });
-        return new Query_1.Query(this.core, Generator_1.Generator.from([{ feed, vertex }]), transactions, this.codec);
+        const view = new GraphView_1.GraphView(this.core, this.codec, transactions);
+        return new Query_1.Query(view, Generator_1.Generator.from([vertex]));
     }
     queryAtVertex(vertex) {
         return this.queryAtId(vertex.getId(), vertex.getFeed());

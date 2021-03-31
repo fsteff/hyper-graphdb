@@ -10,7 +10,7 @@ class Core {
         this.objectStores = new Map();
         this.corestore = corestore;
         this.opts = opts;
-        this.defaultFeed = this.getStore();
+        this.defaultFeed = this.getStore(key);
     }
     async get(feed, id, contentEncoding, version) {
         const vertexId = typeof id === 'string' ? parseInt(id, 16) : id;

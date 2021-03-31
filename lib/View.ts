@@ -2,23 +2,25 @@ import { Core } from "./Core";
 import {IVertex, Vertex} from "./Vertex"
 import  { Transaction } from "hyperobjects"
 import codecs from "codecs"
+import { Generator } from "./Generator";
 
-type Codec<T> = string | codecs.BaseCodec<T>
+export type Codec<T> = string | codecs.BaseCodec<T>
+export type VertexQueries<T> = Generator<IVertex<T>>
 
 export abstract class View<T> {
-    protected transactions: Map<string, Transaction>
-    protected codec: Codec<T>
-    protected db: Core
+    protected readonly transactions: Map<string, Transaction>
+    protected readonly codec: Codec<T>
+    protected readonly db: Core
 
-    constructor(db: Core, transactions: Map<string, Transaction>, contentEncoding: Codec<T>) {
+    constructor(db: Core, contentEncoding: Codec<T>, transactions?: Map<string, Transaction>) {
         this.db = db
-        this.transactions = transactions
+        this.transactions = transactions || new Map<string, Transaction>()
         this.codec = contentEncoding
     }
 
     protected async getTransaction(feed: string, version?: number) : Promise<Transaction>{
         let feedId = feed
-        if(version !== undefined) {
+        if(version) {
             feedId += '@' + version
         }
         if(this.transactions.has(feed)) {
@@ -38,5 +40,5 @@ export abstract class View<T> {
         return vertex
     }
 
-    public abstract out(vertex: IVertex<T>, label?: string): Promise<IVertex<T>[]>
+    public abstract out(vertex: IVertex<T>, label?: string): Promise<VertexQueries<T>>
 }

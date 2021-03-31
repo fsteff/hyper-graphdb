@@ -1,9 +1,10 @@
 import { Core, DBOpts, Corestore } from './lib/Core'
 import { Codec, SimpleGraphObject, GraphObject } from './lib/Codec'
-import { Edge, Vertex } from './lib/Vertex'
+import { Edge, IVertex, Vertex } from './lib/Vertex'
 import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
-import { Query, VertexQuery } from './lib/Query'
+import { Query } from './lib/Query'
+import { GraphView } from './lib/GraphView'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
 import * as Errors from './lib/Errors'
@@ -46,7 +47,7 @@ export class HyperGraphDB {
         const idx = this.indexes.find(i => i.indexName === indexName)
         if(!idx) throw new Error('no index of name "' + indexName + '" found')
 
-        const vertices = new Array<VertexQuery<GraphObject>>()
+        const vertices = new Array<Promise<IVertex<GraphObject>>>()
         const transactions = new Map<string, Transaction>()
         for(const {id, feed} of idx.get(key)) {
             let tr: Promise<Transaction>
@@ -57,9 +58,10 @@ export class HyperGraphDB {
                 tr = Promise.resolve(<Transaction> transactions.get(feed))
             }
             const promise = tr.then(tr => this.core.getInTransaction<GraphObject>(id, this.codec, tr, feed))
-            vertices.push({feed, vertex: promise})
+            vertices.push(promise)
         }
-        return new Query<GraphObject>(this.core, Generator.from(vertices), transactions, this.codec)
+        const view = new GraphView(this.core, this.codec, transactions)
+        return new Query<GraphObject>(view, Generator.from(vertices))
     }
 
     queryAtId(id: number, feed: string|Buffer) {
@@ -72,7 +74,8 @@ export class HyperGraphDB {
             return v
         })
         
-        return new Query<GraphObject>(this.core, Generator.from([{feed, vertex}]), transactions, this.codec)
+        const view = new GraphView(this.core, this.codec, transactions)
+        return new Query<GraphObject>(view, Generator.from([<Promise<IVertex<GraphObject>>>vertex]))
     }
 
     queryAtVertex(vertex: Vertex<GraphObject>) {

@@ -3,41 +3,27 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Query = void 0;
 const Generator_1 = require("./Generator");
 class Query {
-    constructor(db, vertexQueries, transactions, contentEncoding) {
-        this.transactions = new Map();
+    constructor(view, vertexQueries) {
         this.vertexQueries = vertexQueries;
-        this.db = db;
-        this.transactions = transactions;
-        this.codec = contentEncoding;
+        this.view = view;
     }
     matches(test) {
-        const filtered = this.vertexQueries.filter(async (q) => await test(await q.vertex));
-        return new Query(this.db, filtered, this.transactions, this.codec);
+        const filtered = this.vertexQueries.filter(async (q) => await test(q));
+        return new Query(this.view, filtered);
     }
     out(label) {
-        const vertexQuery = this.vertexQueries.flatMap(async (q) => {
-            var _a;
-            const edges = (await q.vertex).getEdges(label);
-            const vertices = new Array();
-            for (const edge of edges) {
-                const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || q.feed;
-                const tr = await this.getTransaction(feed);
-                const vertex = this.db.getInTransaction(edge.ref, this.codec, tr, feed);
-                vertices.push({ feed, vertex });
-            }
-            return vertices;
-        });
-        return new Query(this.db, vertexQuery, this.transactions, this.codec);
+        const vertexQuery = this.vertexQueries.flatMap(async (q) => (await this.view.out(q, label)));
+        return new Query(this.view, vertexQuery);
     }
     vertices() {
-        return this.vertexQueries.map(async (v) => await v.vertex).values();
+        return this.vertexQueries.destruct();
     }
     generator() {
-        return this.vertexQueries.map(async (v) => await v.vertex);
+        return this.vertexQueries;
     }
     repeat(operators, until, maxDepth) {
         const self = this;
-        return new Query(this.db, new Generator_1.Generator(gen()), this.transactions, this.codec);
+        return new Query(this.view, new Generator_1.Generator(gen()));
         async function* gen() {
             let depth = 0;
             let mapped = new Array();
@@ -45,33 +31,21 @@ class Query {
             let queries = await self.vertexQueries.destruct();
             const results = new Array();
             while ((!maxDepth || depth < maxDepth) && (!until || until(results)) && queries.length > 0) {
-                const newVertices = await self.leftDisjoint(queries, mapped, self.vertexQueryEquals);
-                const subQuery = new Query(self.db, Generator_1.Generator.from(newVertices), self.transactions, self.codec);
+                const newVertices = await self.leftDisjoint(queries, mapped, (a, b) => a.equals(b));
+                const subQuery = new Query(self.view, Generator_1.Generator.from(newVertices));
                 mapped = mapped.concat(newVertices);
                 state = await operators(subQuery);
                 queries = await state.vertexQueries.destruct();
                 for (const q of queries) {
                     yield q;
-                    results.push(await q.vertex);
+                    results.push(q);
                 }
                 depth++;
             }
         }
     }
     values(extractor) {
-        return this.vertexQueries.map(async (v) => await extractor(await v.vertex)).values();
-    }
-    async getTransaction(feed) {
-        if (this.transactions.has(feed))
-            return this.transactions.get(feed);
-        else
-            return this.db.transaction(feed);
-    }
-    async resultReductor(arr, vertices) {
-        return (await vertices).concat(arr ? await arr : []);
-    }
-    async vertexQueryEquals(q1, q2) {
-        return q1.feed === q2.feed && (await q1.vertex).getId() === (await q2.vertex).getId();
+        return this.vertexQueries.map(async (v) => await extractor(v)).values();
     }
     async leftDisjoint(arr1, arr2, comparator) {
         const res = new Array();
