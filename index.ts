@@ -4,21 +4,26 @@ import { Edge, IVertex, Vertex } from './lib/Vertex'
 import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
 import { Query } from './lib/Query'
-import { GraphView } from './lib/GraphView'
+import { GraphView, GRAPH_VIEW } from './lib/GraphView'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
 import * as Errors from './lib/Errors'
+import { View } from './lib/View'
+import { ViewFactory } from './lib/ViewFactory'
 
 export {Vertex, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors}
 export class HyperGraphDB {
     readonly core: Core
     readonly crawler: Crawler
     readonly codec = new Codec()
+    readonly factory: ViewFactory<GraphObject>
 
     constructor(corestore: Corestore, key?: string | Buffer, opts?: DBOpts, customCore?: Core) {
         this.core = customCore || new Core(corestore, key, opts)
         this.codec.registerImpl(data => new SimpleGraphObject(data))
         this.crawler = new Crawler(this.core)
+        this.factory = new ViewFactory<GraphObject>(this.core, this.codec)
+        this.factory.register(GRAPH_VIEW, (db, codec, tr) => new GraphView(db, codec, this.factory, tr))
     }
 
     async put(vertex: Vertex<GraphObject> | Array<Vertex<GraphObject>>, feed?: string | Buffer) {
@@ -43,7 +48,7 @@ export class HyperGraphDB {
         return <Vertex<T>> new Vertex<GraphObject>(this.codec)
     }
 
-    queryIndex(indexName: string, key: string) {
+    queryIndex(indexName: string, key: string, view?: View<GraphObject>) {
         const idx = this.indexes.find(i => i.indexName === indexName)
         if(!idx) throw new Error('no index of name "' + indexName + '" found')
 
@@ -60,11 +65,11 @@ export class HyperGraphDB {
             const promise = tr.then(tr => this.core.getInTransaction<GraphObject>(id, this.codec, tr, feed))
             vertices.push(promise)
         }
-        const view = new GraphView(this.core, this.codec, transactions)
-        return new Query<GraphObject>(view, Generator.from(vertices))
+        if(!view) view = this.factory.get(GRAPH_VIEW, transactions)
+        return view.query(Generator.from(vertices))
     }
 
-    queryAtId(id: number, feed: string|Buffer) {
+    queryAtId(id: number, feed: string|Buffer, view?: View<GraphObject>) {
         const transactions = new Map<string, Transaction>()
         feed = <string> (Buffer.isBuffer(feed) ? feed.toString('hex') : feed)
         const trPromise = this.core.transaction(feed)
@@ -74,17 +79,17 @@ export class HyperGraphDB {
             return v
         })
         
-        const view = new GraphView(this.core, this.codec, transactions)
-        return new Query<GraphObject>(view, Generator.from([<Promise<IVertex<GraphObject>>>vertex]))
+        if(!view) view = this.factory.get(GRAPH_VIEW, transactions)
+        return view.query(Generator.from([<Promise<IVertex<GraphObject>>>vertex]))
     }
 
-    queryAtVertex(vertex: Vertex<GraphObject>) {
-        return this.queryAtId(vertex.getId(), <string> vertex.getFeed())
+    queryAtVertex(vertex: Vertex<GraphObject>, view?: View<GraphObject>) {
+        return this.queryAtId(vertex.getId(), <string> vertex.getFeed(), view)
     }
 
-    queryPathAtVertex<T extends GraphObject>(path: string, vertex: Vertex<T>) {
+    queryPathAtVertex<T extends GraphObject>(path: string, vertex: Vertex<T>, view?: View<GraphObject>) {
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
-        let last = this.queryAtVertex(vertex)
+        let last = this.queryAtVertex(vertex, view)
         for(const next of parts) {
             last = last.out(next)
         }

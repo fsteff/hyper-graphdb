@@ -1,14 +1,17 @@
-import codecs from 'codecs'
 import { Transaction } from 'hyperobjects'
 import { Core } from './Core'
 import { Generator } from './Generator'
 import { IVertex, Vertex } from './Vertex'
 import { View, Codec, VertexQueries } from './View'
+import { ViewFactory } from './ViewFactory'
+
+export const GRAPH_VIEW = 'GraphView'
 
 export class GraphView<T> extends View<T> {
+    public readonly viewName = GRAPH_VIEW
 
-    constructor(db: Core, contentEncoding: Codec<T>, transactions?: Map<string, Transaction>){
-        super(db, contentEncoding, transactions)
+    constructor(db: Core, contentEncoding: Codec<T>, factory: ViewFactory<T>, transactions?: Map<string, Transaction>){
+        super(db, contentEncoding, factory, transactions)
 
     }
 
@@ -20,11 +23,9 @@ export class GraphView<T> extends View<T> {
         const vertices = new Array<Promise<IVertex<T>>>()
         for(const edge of edges) {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
-            const tr = await this.getTransaction(feed)
-            const v = this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
-            vertices.push(v)
+            // TODO: version pinning does not work yet
+            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view))
         }
         return Generator.from(vertices)
     }
-    
 }

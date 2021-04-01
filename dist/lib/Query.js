@@ -9,11 +9,11 @@ class Query {
     }
     matches(test) {
         const filtered = this.vertexQueries.filter(async (q) => await test(q));
-        return new Query(this.view, filtered);
+        return this.view.query(filtered);
     }
     out(label) {
         const vertexQuery = this.vertexQueries.flatMap(async (q) => (await this.view.out(q, label)));
-        return new Query(this.view, vertexQuery);
+        return this.view.query(vertexQuery);
     }
     vertices() {
         return this.vertexQueries.destruct();
@@ -23,7 +23,7 @@ class Query {
     }
     repeat(operators, until, maxDepth) {
         const self = this;
-        return new Query(this.view, new Generator_1.Generator(gen()));
+        return this.view.query(new Generator_1.Generator(gen()));
         async function* gen() {
             let depth = 0;
             let mapped = new Array();
@@ -32,7 +32,7 @@ class Query {
             const results = new Array();
             while ((!maxDepth || depth < maxDepth) && (!until || until(results)) && queries.length > 0) {
                 const newVertices = await self.leftDisjoint(queries, mapped, (a, b) => a.equals(b));
-                const subQuery = new Query(self.view, Generator_1.Generator.from(newVertices));
+                const subQuery = self.view.query(Generator_1.Generator.from(newVertices));
                 mapped = mapped.concat(newVertices);
                 state = await operators(subQuery);
                 queries = await state.vertexQueries.destruct();

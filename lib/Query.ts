@@ -15,12 +15,12 @@ export class Query<T> {
 
     matches (test:  QueryPredicate<T>): Query<T> {
         const filtered = this.vertexQueries.filter(async q => await test(q))
-        return new Query<T>(this.view, filtered)
+        return this.view.query(filtered)
     }
 
     out(label?: string) : Query<T> {
         const vertexQuery = this.vertexQueries.flatMap(async q => (await this.view.out(q, label)))
-        return new Query<T>(this.view, vertexQuery)
+        return this.view.query(vertexQuery)
     }
 
     vertices() {
@@ -33,7 +33,7 @@ export class Query<T> {
 
     repeat(operators: (query: Query<T>) => Query<T>, until?: (vertices: IVertex<T>[]) => boolean,  maxDepth?: number) : Query<T> {
         const self = this
-        return new Query<T>(this.view, new Generator(gen()))
+        return this.view.query(new Generator(gen()))
 
         async function* gen() {
             let depth = 0
@@ -44,7 +44,7 @@ export class Query<T> {
 
             while((!maxDepth || depth < maxDepth) && (!until || until(results)) && queries.length > 0) {
                 const newVertices = await self.leftDisjoint(queries, mapped, (a,b) => a.equals(b)) 
-                const subQuery = new Query<T>(self.view, Generator.from(newVertices))
+                const subQuery = self.view.query(Generator.from(newVertices))
                 mapped = mapped.concat(newVertices)
     
                 state = await operators(subQuery)

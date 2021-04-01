@@ -39,12 +39,15 @@ const Generator_1 = require("./lib/Generator");
 Object.defineProperty(exports, "Generator", { enumerable: true, get: function () { return Generator_1.Generator; } });
 const Errors = __importStar(require("./lib/Errors"));
 exports.Errors = Errors;
+const ViewFactory_1 = require("./lib/ViewFactory");
 class HyperGraphDB {
     constructor(corestore, key, opts, customCore) {
         this.codec = new Codec_1.Codec();
         this.core = customCore || new Core_1.Core(corestore, key, opts);
         this.codec.registerImpl(data => new Codec_1.SimpleGraphObject(data));
         this.crawler = new Crawler_1.default(this.core);
+        this.factory = new ViewFactory_1.ViewFactory(this.core, this.codec);
+        this.factory.register(GraphView_1.GRAPH_VIEW, (db, codec, tr) => new GraphView_1.GraphView(db, codec, this.factory, tr));
     }
     async put(vertex, feed) {
         feed = feed || await this.core.getDefaultFeedId();
@@ -65,7 +68,7 @@ class HyperGraphDB {
     create() {
         return new Vertex_1.Vertex(this.codec);
     }
-    queryIndex(indexName, key) {
+    queryIndex(indexName, key, view) {
         const idx = this.indexes.find(i => i.indexName === indexName);
         if (!idx)
             throw new Error('no index of name "' + indexName + '" found');
@@ -83,10 +86,11 @@ class HyperGraphDB {
             const promise = tr.then(tr => this.core.getInTransaction(id, this.codec, tr, feed));
             vertices.push(promise);
         }
-        const view = new GraphView_1.GraphView(this.core, this.codec, transactions);
-        return new Query_1.Query(view, Generator_1.Generator.from(vertices));
+        if (!view)
+            view = this.factory.get(GraphView_1.GRAPH_VIEW, transactions);
+        return view.query(Generator_1.Generator.from(vertices));
     }
-    queryAtId(id, feed) {
+    queryAtId(id, feed, view) {
         const transactions = new Map();
         feed = (Buffer.isBuffer(feed) ? feed.toString('hex') : feed);
         const trPromise = this.core.transaction(feed);
@@ -95,15 +99,16 @@ class HyperGraphDB {
             transactions.set(feed, tr);
             return v;
         });
-        const view = new GraphView_1.GraphView(this.core, this.codec, transactions);
-        return new Query_1.Query(view, Generator_1.Generator.from([vertex]));
+        if (!view)
+            view = this.factory.get(GraphView_1.GRAPH_VIEW, transactions);
+        return view.query(Generator_1.Generator.from([vertex]));
     }
-    queryAtVertex(vertex) {
-        return this.queryAtId(vertex.getId(), vertex.getFeed());
+    queryAtVertex(vertex, view) {
+        return this.queryAtId(vertex.getId(), vertex.getFeed(), view);
     }
-    queryPathAtVertex(path, vertex) {
+    queryPathAtVertex(path, vertex, view) {
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0);
-        let last = this.queryAtVertex(vertex);
+        let last = this.queryAtVertex(vertex, view);
         for (const next of parts) {
             last = last.out(next);
         }

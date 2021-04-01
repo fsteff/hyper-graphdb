@@ -9,7 +9,8 @@ message Edge {
     required string label = 2;
     optional bytes feed = 3;
     optional uint64 version = 4;
-    map<string, bytes> metadata = 5;
+    optional string view = 5;
+    map<string, bytes> metadata = 6;
 }
 
 message GraphContent {
