@@ -178,6 +178,10 @@ function defineEdge () {
       var len = encodings.varint.encodingLength(obj.version)
       length += 1 + len
     }
+    if (defined(obj.view)) {
+      var len = encodings.string.encodingLength(obj.view)
+      length += 1 + len
+    }
     if (defined(obj.metadata)) {
       var tmp = Object.keys(obj.metadata)
       for (var i = 0; i < tmp.length; i++) {
@@ -215,6 +219,11 @@ function defineEdge () {
       encodings.varint.encode(obj.version, buf, offset)
       offset += encodings.varint.encode.bytes
     }
+    if (defined(obj.view)) {
+      buf[offset++] = 42
+      encodings.string.encode(obj.view, buf, offset)
+      offset += encodings.string.encode.bytes
+    }
     if (defined(obj.metadata)) {
       var tmp = Object.keys(obj.metadata)
       for (var i = 0; i < tmp.length; i++) {
@@ -222,7 +231,7 @@ function defineEdge () {
       }
       for (var i = 0; i < tmp.length; i++) {
         if (!defined(tmp[i])) continue
-        buf[offset++] = 42
+        buf[offset++] = 50
         varint.encode(Map_string_bytes.encodingLength(tmp[i]), buf, offset)
         offset += varint.encode.bytes
         Map_string_bytes.encode(tmp[i], buf, offset)
@@ -243,6 +252,7 @@ function defineEdge () {
       label: "",
       feed: null,
       version: 0,
+      view: "",
       metadata: {}
     }
     var found0 = false
@@ -276,6 +286,10 @@ function defineEdge () {
         offset += encodings.varint.decode.bytes
         break
         case 5:
+        obj.view = encodings.string.decode(buf, offset)
+        offset += encodings.string.decode.bytes
+        break
+        case 6:
         var len = varint.decode(buf, offset)
         offset += varint.decode.bytes
         var tmp = Map_string_bytes.decode(buf, offset, offset + len)
