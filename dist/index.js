@@ -34,7 +34,7 @@ const Crawler_1 = __importDefault(require("./lib/Crawler"));
 exports.Crawler = Crawler_1.default;
 const Query_1 = require("./lib/Query");
 Object.defineProperty(exports, "Query", { enumerable: true, get: function () { return Query_1.Query; } });
-const GraphView_1 = require("./lib/GraphView");
+const View_1 = require("./lib/View");
 const Generator_1 = require("./lib/Generator");
 Object.defineProperty(exports, "Generator", { enumerable: true, get: function () { return Generator_1.Generator; } });
 const Errors = __importStar(require("./lib/Errors"));
@@ -47,7 +47,7 @@ class HyperGraphDB {
         this.codec.registerImpl(data => new Codec_1.SimpleGraphObject(data));
         this.crawler = new Crawler_1.default(this.core);
         this.factory = new ViewFactory_1.ViewFactory(this.core, this.codec);
-        this.factory.register(GraphView_1.GRAPH_VIEW, (db, codec, tr) => new GraphView_1.GraphView(db, codec, this.factory, tr));
+        this.factory.register(View_1.GRAPH_VIEW, (db, codec, tr) => new View_1.GraphView(db, codec, this.factory, tr));
     }
     async put(vertex, feed) {
         feed = feed || await this.core.getDefaultFeedId();
@@ -87,7 +87,7 @@ class HyperGraphDB {
             vertices.push(promise);
         }
         if (!view)
-            view = this.factory.get(GraphView_1.GRAPH_VIEW, transactions);
+            view = this.factory.get(View_1.GRAPH_VIEW, transactions);
         return view.query(Generator_1.Generator.from(vertices));
     }
     queryAtId(id, feed, view) {
@@ -100,7 +100,7 @@ class HyperGraphDB {
             return v;
         });
         if (!view)
-            view = this.factory.get(GraphView_1.GRAPH_VIEW, transactions);
+            view = this.factory.get(View_1.GRAPH_VIEW, transactions);
         return view.query(Generator_1.Generator.from([vertex]));
     }
     queryAtVertex(vertex, view) {

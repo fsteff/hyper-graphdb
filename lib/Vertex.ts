@@ -84,13 +84,13 @@ export class Vertex<T> implements IVertex<T> {
         this.edges.push(edge)
     }
 
-    addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Object) {
+    addEdgeTo(vertex: Vertex<any>, label: string, feed?: Buffer, metadata?: Object, view?: string) {
         if (vertex.getId() < 0) throw new Error('Referenced vertex has no id')
         // get feed from vertex
         if (!feed && vertex.getFeed()) feed = Buffer.from(<string>vertex.getFeed(), 'hex')
         // if the referenced vertex is in the same feed, we don't need to store that
         if (feed && this.feed && feed.equals(Buffer.from(<string>this.getFeed(), 'hex'))) feed = undefined
-        this.edges.push({ ref: vertex.getId(), label, feed, version: vertex.version, metadata })
+        this.edges.push({ ref: vertex.getId(), label, feed, version: vertex.version, metadata , view})
     }
 
     removeEdge(ref: number | string | Edge | Array<Edge>) {
