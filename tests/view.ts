@@ -4,12 +4,11 @@ import tape from 'tape'
 import { IVertex, Vertex } from '../lib/Vertex'
 import { View, Codec, VertexQueries, GRAPH_VIEW } from '../lib/View'
 import { HyperGraphDB } from '..'
-import { GraphObject, SimpleGraphObject } from '../lib/Codec'
+import { SimpleGraphObject } from '../lib/Codec'
 import { Core } from '../lib/Core'
 import { ViewFactory } from '../lib/ViewFactory'
 import { Transaction } from 'hyperobjects'
 import { Generator } from '../lib/Generator'
-import codecs from 'codecs'
 
 class NextView<SimpleGraphObject> extends View<SimpleGraphObject> {
     public readonly viewName = 'NextView'

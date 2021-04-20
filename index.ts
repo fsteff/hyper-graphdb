@@ -8,10 +8,11 @@ import { GraphView, GRAPH_VIEW } from './lib/View'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
 import * as Errors from './lib/Errors'
-import { View } from './lib/View'
+import { View, VertexQueries } from './lib/View'
 import { ViewFactory } from './lib/ViewFactory'
 
-export {Vertex, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors}
+export {IVertex, Vertex, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors, View, VertexQueries }
+
 export class HyperGraphDB {
     readonly core: Core
     readonly crawler: Crawler
@@ -87,7 +88,7 @@ export class HyperGraphDB {
         return this.queryAtId(vertex.getId(), <string> vertex.getFeed(), view)
     }
 
-    queryPathAtVertex<T extends GraphObject>(path: string, vertex: Vertex<T>, view?: View<GraphObject>) {
+    queryPathAtVertex<T extends GraphObject>(path: string, vertex: Vertex<T>, view?: View<GraphObject>) : Query<GraphObject> {
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
         let last = this.queryAtVertex(vertex, view)
         for(const next of parts) {
