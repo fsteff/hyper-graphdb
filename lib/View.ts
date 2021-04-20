@@ -31,7 +31,7 @@ export abstract class View<T> {
         if(version) {
             feedId += '@' + version
         }
-        if(this.transactions.has(feed)) {
+        if(this.transactions.has(feedId)) {
             return <Transaction>this.transactions.get(feedId)
         }
         else {

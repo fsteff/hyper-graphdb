@@ -17,7 +17,7 @@ class View {
         if (version) {
             feedId += '@' + version;
         }
-        if (this.transactions.has(feed)) {
+        if (this.transactions.has(feedId)) {
             return this.transactions.get(feedId);
         }
         else {
