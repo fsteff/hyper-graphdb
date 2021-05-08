@@ -49,7 +49,7 @@ export class HyperGraphDB {
         return <Vertex<T>> new Vertex<GraphObject>(this.codec)
     }
 
-    queryIndex(indexName: string, key: string, view?: View<GraphObject>) {
+    queryIndex(indexName: string, key: string, view?: View<GraphObject>): Query<GraphObject> {
         const idx = this.indexes.find(i => i.indexName === indexName)
         if(!idx) throw new Error('no index of name "' + indexName + '" found')
 
@@ -70,7 +70,7 @@ export class HyperGraphDB {
         return view.query(Generator.from(vertices))
     }
 
-    queryAtId(id: number, feed: string|Buffer, view?: View<GraphObject>) {
+    queryAtId(id: number, feed: string|Buffer, view?: View<GraphObject>): Query<GraphObject> {
         const transactions = new Map<string, Transaction>()
         feed = <string> (Buffer.isBuffer(feed) ? feed.toString('hex') : feed)
         const trPromise = this.core.transaction(feed)
@@ -84,7 +84,7 @@ export class HyperGraphDB {
         return view.query(Generator.from([<Promise<IVertex<GraphObject>>>vertex]))
     }
 
-    queryAtVertex(vertex: Vertex<GraphObject>, view?: View<GraphObject>) {
+    queryAtVertex(vertex: Vertex<GraphObject>, view?: View<GraphObject>): Query<GraphObject> {
         return this.queryAtId(vertex.getId(), <string> vertex.getFeed(), view)
     }
 

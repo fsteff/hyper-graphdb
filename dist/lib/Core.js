@@ -96,6 +96,9 @@ class Core {
             const core = self.corestore.get(feed ? { key: feed } : undefined);
             const created = new hyperobjects_2.HyperObjects(core, { onRead, onWrite });
             await created.feed.ready();
+            if (!core.writable) {
+                await created.feed.update();
+            }
             return created;
             function onRead(index, data) {
                 var _a, _b;

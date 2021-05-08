@@ -111,6 +111,10 @@ export class Core {
             const core = self.corestore.get(feed ? {key: feed} : undefined)
             const created = new HyperObjects(core, {onRead, onWrite})
             await created.feed.ready()
+            if(!core.writable) {
+                await created.feed.update()
+            }
+
             return created
             
             function onRead(index: number, data: Buffer) {
