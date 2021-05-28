@@ -103,16 +103,11 @@ class Core {
             if (!core.writable) {
                 const connect = new Promise((resolve, _) => {
                     if (core.peers.filter(p => !is_loopback_addr_1.default(p.remoteAddress)).length > 0) {
-                        console.log(core.peers);
                         return resolve(undefined);
                     }
-                    console.log('looking up peers for ' + feed);
-                    core.once('peer-add', peer => {
-                        console.log('peer-add:' + peer.remoteAddress);
-                        resolve(undefined);
-                    });
+                    core.once('peer-add', peer => resolve(undefined));
                 });
-                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('peer lookup timed out for feed ' + feed)), 5000));
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('peer lookup timed out (5s) for feed ' + feed)), 5000));
                 await Promise.race([connect, timeout])
                     .catch(err => console.error(err))
                     .then(() => created.feed.update(1))
