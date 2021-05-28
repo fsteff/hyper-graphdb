@@ -3,11 +3,12 @@ import { Transaction } from 'hyperobjects'
 import { Feed, HyperObjects } from 'hyperobjects'
 import { Vertex } from './Vertex'
 import { VertexDecodingError } from './Errors'
+import isLoopbackAddr from 'is-loopback-addr'
 
 export type RWFunction = (data: Buffer, feed: Buffer, index: number) => Buffer
 export type DBOpts = {onRead: RWFunction, onWrite: RWFunction}
 export interface Corestore  {
-    get(opts?: {key?: string | Buffer}): Feed,
+    get(opts?: {key?: string | Buffer} | string | Buffer): Feed,
     namespace(name: string): Corestore
 }
 
@@ -112,7 +113,26 @@ export class Core {
             const created = new HyperObjects(core, {onRead, onWrite})
             await created.feed.ready()
             if(!core.writable) {
-                await created.feed.update()
+                const connect = new Promise((resolve, _) => {
+                    if(core.peers.filter(p => !isLoopbackAddr(p.remoteAddress)).length > 0){
+                        console.log(core.peers)
+                        return resolve(undefined)
+                    } 
+
+                    console.log('looking up peers for ' + feed)
+                    core.once('peer-add', peer => {
+                        console.log('peer-add:' + peer.remoteAddress)
+                        resolve(undefined)
+                    })
+                })
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('peer lookup timed out for feed ' + feed)), 5000))
+                await Promise.race([connect, timeout])
+                    .catch(err => console.error(err))
+                    .then(() => created.feed.update(1))
+                    .catch(err => {
+                        if(core.length === 0) throw new Error(err.message + ' for feed ' + feed)
+                        else console.error(err.message + ' for feed ' + feed)
+                    })
             }
 
             return created

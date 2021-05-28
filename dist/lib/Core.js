@@ -1,10 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Core = void 0;
 const hyperobjects_1 = require("hyperobjects");
 const hyperobjects_2 = require("hyperobjects");
 const Vertex_1 = require("./Vertex");
 const Errors_1 = require("./Errors");
+const is_loopback_addr_1 = __importDefault(require("is-loopback-addr"));
 class Core {
     constructor(corestore, key, opts) {
         this.objectStores = new Map();
@@ -97,7 +101,27 @@ class Core {
             const created = new hyperobjects_2.HyperObjects(core, { onRead, onWrite });
             await created.feed.ready();
             if (!core.writable) {
-                await created.feed.update();
+                const connect = new Promise((resolve, _) => {
+                    if (core.peers.filter(p => !is_loopback_addr_1.default(p.remoteAddress)).length > 0) {
+                        console.log(core.peers);
+                        return resolve(undefined);
+                    }
+                    console.log('looking up peers for ' + feed);
+                    core.once('peer-add', peer => {
+                        console.log('peer-add:' + peer.remoteAddress);
+                        resolve(undefined);
+                    });
+                });
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('peer lookup timed out for feed ' + feed)), 5000));
+                await Promise.race([connect, timeout])
+                    .catch(err => console.error(err))
+                    .then(() => created.feed.update(1))
+                    .catch(err => {
+                    if (core.length === 0)
+                        throw new Error(err.message + ' for feed ' + feed);
+                    else
+                        console.error(err.message + ' for feed ' + feed);
+                });
             }
             return created;
             function onRead(index, data) {

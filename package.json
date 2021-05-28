@@ -1,6 +1,6 @@
 {
   "name": "hyper-graphdb",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "hypercore backed graph db",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,8 @@
     "@types/streamx": "^2.9.0",
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
-    "hyperobjects": "^0.2.6",
+    "hyperobjects": "^0.2.8",
+    "is-loopback-addr": "^1.0.1",
     "protocol-buffers": "^4.2.0",
     "streamx": "^2.10.1"
   },
