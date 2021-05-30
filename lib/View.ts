@@ -41,12 +41,12 @@ export abstract class View<T> {
         }
     }
 
-    protected async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string) : Promise<IVertex<T>>{
+    protected async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string, metadata?: Object) : Promise<IVertex<T>>{
         feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
 
         if(viewDesc) {
             const view = this.getView(viewDesc)
-            return view.get(feed, id, version)
+            return view.get(feed, id, version, undefined, metadata)
         }
 
         const tr = await this.getTransaction(feed, version)

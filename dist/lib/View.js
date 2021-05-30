@@ -26,11 +26,11 @@ class View {
             return tr;
         }
     }
-    async get(feed, id, version, viewDesc) {
+    async get(feed, id, version, viewDesc, metadata) {
         feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed;
         if (viewDesc) {
             const view = this.getView(viewDesc);
-            return view.get(feed, id, version);
+            return view.get(feed, id, version, undefined, metadata);
         }
         const tr = await this.getTransaction(feed, version);
         const vertex = this.db.getInTransaction(id, this.codec, tr, feed);
