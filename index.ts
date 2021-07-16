@@ -11,7 +11,7 @@ import * as Errors from './lib/Errors'
 import { View, VertexQueries } from './lib/View'
 import { ViewFactory } from './lib/ViewFactory'
 
-export {IVertex, Vertex, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors, View, VertexQueries, GRAPH_VIEW }
+export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors, View, VertexQueries, GRAPH_VIEW }
 
 export class HyperGraphDB {
     readonly core: Core
