@@ -67,7 +67,7 @@ class GraphView extends View {
         for (const edge of edges) {
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
             // TODO: version pinning does not work yet
-            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view));
+            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata));
         }
         return Generator_1.Generator.from(vertices);
     }

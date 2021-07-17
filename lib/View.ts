@@ -95,7 +95,7 @@ export class GraphView<T> extends View<T> {
         for(const edge of edges) {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
             // TODO: version pinning does not work yet
-            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view))
+            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata))
         }
         return Generator.from(vertices)
     }
