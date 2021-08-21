@@ -9,6 +9,7 @@ export type RWFunction = (data: Buffer, feed: Buffer, index: number) => Buffer
 export type DBOpts = {onRead: RWFunction, onWrite: RWFunction}
 export interface Corestore  {
     get(opts?: {key?: string | Buffer} | string | Buffer): Feed,
+    default(opts?: any): Feed,
     namespace(name: string): Corestore
 }
 
