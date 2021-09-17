@@ -99,7 +99,7 @@ export class GraphView<T> extends View<T> {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
             // TODO: version pinning does not work yet
             const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata)
-            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, err)})
+            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
             vertices.push(promise)
         }
         return Generator.from(vertices)

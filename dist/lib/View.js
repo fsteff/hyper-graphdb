@@ -71,7 +71,7 @@ class GraphView extends View {
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
             // TODO: version pinning does not work yet
             const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata);
-            promise.catch(err => { throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, err); });
+            promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
             vertices.push(promise);
         }
         return Generator_1.Generator.from(vertices);
