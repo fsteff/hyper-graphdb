@@ -1,6 +1,7 @@
 import codecs from 'codecs'
 import { Transaction } from 'hyperobjects'
 import { Core } from './Core'
+import { EdgeTraversingError, VertexLoadingError } from './Errors'
 import { Generator } from './Generator'
 import { Query } from './Query'
 import { IVertex, Vertex } from './Vertex'
@@ -47,11 +48,13 @@ export abstract class View<T> {
         if(viewDesc) {
             const view = this.getView(viewDesc)
             return view.get(feed, id, version, undefined, metadata)
+                .catch(err => {throw new VertexLoadingError(err, <string>feed, id, version)})
         }
 
         const tr = await this.getTransaction(feed, version)
-        const vertex = this.db.getInTransaction<T>(id, this.codec, tr, feed)
-        return vertex
+        const promise = this.db.getInTransaction<T>(id, this.codec, tr, feed)
+        promise.catch(err => {throw new VertexLoadingError(err, <string>feed, id, version, viewDesc)})
+        return promise
     }
 
     protected getView(name?: string): View<T> {
@@ -95,7 +98,9 @@ export class GraphView<T> extends View<T> {
         for(const edge of edges) {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
             // TODO: version pinning does not work yet
-            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata))
+            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata)
+            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, err)})
+            vertices.push(promise)
         }
         return Generator.from(vertices)
     }

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphView = exports.View = exports.GRAPH_VIEW = void 0;
+const Errors_1 = require("./Errors");
 const Generator_1 = require("./Generator");
 const Query_1 = require("./Query");
 const Vertex_1 = require("./Vertex");
@@ -30,11 +31,13 @@ class View {
         feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed;
         if (viewDesc) {
             const view = this.getView(viewDesc);
-            return view.get(feed, id, version, undefined, metadata);
+            return view.get(feed, id, version, undefined, metadata)
+                .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, id, version); });
         }
         const tr = await this.getTransaction(feed, version);
-        const vertex = this.db.getInTransaction(id, this.codec, tr, feed);
-        return vertex;
+        const promise = this.db.getInTransaction(id, this.codec, tr, feed);
+        promise.catch(err => { throw new Errors_1.VertexLoadingError(err, feed, id, version, viewDesc); });
+        return promise;
     }
     getView(name) {
         if (!name)
@@ -67,7 +70,9 @@ class GraphView extends View {
         for (const edge of edges) {
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
             // TODO: version pinning does not work yet
-            vertices.push(this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata));
+            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata);
+            promise.catch(err => { throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, err); });
+            vertices.push(promise);
         }
         return Generator_1.Generator.from(vertices);
     }

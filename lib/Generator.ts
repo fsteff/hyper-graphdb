@@ -84,7 +84,7 @@ export class Generator<T> {
                     yield await p
                 } catch (err) {
                     if (err instanceof Error) yield err
-                    else yield new Error(err)
+                    else yield new Error(<string>err)
                 }
             }
         }
