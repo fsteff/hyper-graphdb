@@ -159,4 +159,16 @@ export class HyperGraphDB {
             return (b.getTimestamp() || 0) - (a.getTimestamp() || 0)
         }
     }
+
+    async updateVertex(vertex: Vertex<GraphObject>) {
+       const update = await this.core.transaction(<string>vertex.getFeed(), async tr => {
+            const version = await tr.getPreviousTransactionIndex()
+            if(version > <number> vertex.getVersion()) {
+                return this.core.getInTransaction(vertex.getId(), this.codec, tr, <string>vertex.getFeed())
+            }
+       })
+       if(update) {
+           Object.assign(vertex, update)
+       }
+    }
 }

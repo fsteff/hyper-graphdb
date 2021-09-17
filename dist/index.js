@@ -176,6 +176,17 @@ class HyperGraphDB {
             return (b.getTimestamp() || 0) - (a.getTimestamp() || 0);
         }
     }
+    async updateVertex(vertex) {
+        const update = await this.core.transaction(vertex.getFeed(), async (tr) => {
+            const version = await tr.getPreviousTransactionIndex();
+            if (version > vertex.getVersion()) {
+                return this.core.getInTransaction(vertex.getId(), this.codec, tr, vertex.getFeed());
+            }
+        });
+        if (update) {
+            Object.assign(vertex, update);
+        }
+    }
 }
 exports.HyperGraphDB = HyperGraphDB;
 //# sourceMappingURL=index.js.map
