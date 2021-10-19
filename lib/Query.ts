@@ -18,8 +18,8 @@ export class Query<T> {
         return this.view.query(filtered)
     }
 
-    out(label?: string) : Query<T> {
-        const vertexQuery = this.vertexQueries.flatMap(async q => (await this.view.out(q, label)))
+    out(label?: string, view?: View<T>) : Query<T> {
+        const vertexQuery = this.vertexQueries.flatMap(async q => (await (view || this.view).out(q, label)))
         return this.view.query(vertexQuery)
     }
 

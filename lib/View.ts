@@ -42,7 +42,7 @@ export abstract class View<T> {
         }
     }
 
-    protected async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string, metadata?: Object) : Promise<IVertex<T>>{
+    public async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string, metadata?: Object) : Promise<IVertex<T>>{
         feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
 
         if(viewDesc) {
@@ -90,7 +90,7 @@ export class GraphView<T> extends View<T> {
     }
 
     public async out(vertex: Vertex<T>, label?: string):  Promise<VertexQueries<T>> {
-        if(!(vertex instanceof Vertex) || !vertex.getFeed() ) {
+        if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
             throw new Error('GraphView.out does only accept persisted Vertex instances as input')
         }
         const edges = vertex.getEdges(label)

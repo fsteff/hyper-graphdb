@@ -11,8 +11,8 @@ class Query {
         const filtered = this.vertexQueries.filter(async (q) => await test(q));
         return this.view.query(filtered);
     }
-    out(label) {
-        const vertexQuery = this.vertexQueries.flatMap(async (q) => (await this.view.out(q, label)));
+    out(label, view) {
+        const vertexQuery = this.vertexQueries.flatMap(async (q) => (await (view || this.view).out(q, label)));
         return this.view.query(vertexQuery);
     }
     vertices() {

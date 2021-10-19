@@ -4,7 +4,6 @@ exports.GraphView = exports.View = exports.GRAPH_VIEW = void 0;
 const Errors_1 = require("./Errors");
 const Generator_1 = require("./Generator");
 const Query_1 = require("./Query");
-const Vertex_1 = require("./Vertex");
 exports.GRAPH_VIEW = 'GraphView';
 class View {
     constructor(db, contentEncoding, factory, transactions) {
@@ -62,7 +61,7 @@ class GraphView extends View {
     }
     async out(vertex, label) {
         var _a;
-        if (!(vertex instanceof Vertex_1.Vertex) || !vertex.getFeed()) {
+        if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
             throw new Error('GraphView.out does only accept persisted Vertex instances as input');
         }
         const edges = vertex.getEdges(label);
