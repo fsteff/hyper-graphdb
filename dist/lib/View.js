@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GraphView = exports.View = exports.GRAPH_VIEW = void 0;
+exports.StaticView = exports.GraphView = exports.View = exports.STATIC_VIEW = exports.GRAPH_VIEW = void 0;
 const Errors_1 = require("./Errors");
 const Generator_1 = require("./Generator");
 const Query_1 = require("./Query");
 exports.GRAPH_VIEW = 'GraphView';
+exports.STATIC_VIEW = 'StaticView';
 class View {
     constructor(db, contentEncoding, factory, transactions) {
         this.db = db;
@@ -77,4 +78,35 @@ class GraphView extends View {
     }
 }
 exports.GraphView = GraphView;
+class StaticView extends View {
+    constructor(db, contentEncoding, factory, transactions) {
+        super(db, contentEncoding, factory, transactions);
+        this.viewName = exports.STATIC_VIEW;
+    }
+    async out(vertex, label) {
+        var _a;
+        if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
+            throw new Error('GraphView.out does only accept persisted Vertex instances as input');
+        }
+        const edges = vertex.getEdges(label);
+        const vertices = new Array();
+        for (const edge of edges) {
+            const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
+            // TODO: version pinning does not work yet
+            const promise = this.get(feed, edge.ref);
+            promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
+            vertices.push(promise);
+        }
+        return Generator_1.Generator.from(vertices);
+    }
+    // ignores other views in metadata
+    async get(feed, id, version) {
+        feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed;
+        const tr = await this.getTransaction(feed, version);
+        const promise = this.db.getInTransaction(id, this.codec, tr, feed);
+        promise.catch(err => { throw new Errors_1.VertexLoadingError(err, feed, id, version); });
+        return promise;
+    }
+}
+exports.StaticView = StaticView;
 //# sourceMappingURL=View.js.map

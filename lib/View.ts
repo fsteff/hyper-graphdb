@@ -8,6 +8,7 @@ import { IVertex, Vertex } from './Vertex'
 import { ViewFactory } from './ViewFactory'
 
 export const GRAPH_VIEW = 'GraphView'
+export const STATIC_VIEW = 'StaticView'
 
 export type Codec<T> = string | codecs.BaseCodec<T>
 export type VertexQueries<T> = Generator<IVertex<T>>
@@ -67,7 +68,7 @@ export abstract class View<T> {
      * @param startAt Generator of vertices to start from
      * @returns a query
      */
-    public query(startAt: Generator<IVertex<T>>) {
+    public query(startAt: Generator<IVertex<T>>): Query<T> {
         return new Query(this, startAt)
     }
 
@@ -104,4 +105,39 @@ export class GraphView<T> extends View<T> {
         }
         return Generator.from(vertices)
     }
+}
+
+export class StaticView<T> extends View<T> {
+    public readonly viewName = STATIC_VIEW
+
+    constructor(db: Core, contentEncoding: Codec<T>, factory: ViewFactory<T>, transactions?: Map<string, Transaction>){
+        super(db, contentEncoding, factory, transactions)
+    }
+
+    public async out(vertex: Vertex<T>, label?: string):  Promise<VertexQueries<T>> {
+        if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
+            throw new Error('GraphView.out does only accept persisted Vertex instances as input')
+        }
+        const edges = vertex.getEdges(label)
+        const vertices = new Array<Promise<IVertex<T>>>()
+        for(const edge of edges) {
+            const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
+            // TODO: version pinning does not work yet
+            const promise = this.get(feed, edge.ref)
+            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
+            vertices.push(promise)
+        }
+        return Generator.from(vertices)
+    }
+
+    // ignores other views in metadata
+    public async get(feed: string|Buffer, id: number, version?: number) : Promise<IVertex<T>>{
+        feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
+
+        const tr = await this.getTransaction(feed, version)
+        const promise = this.db.getInTransaction<T>(id, this.codec, tr, feed)
+        promise.catch(err => {throw new VertexLoadingError(err, <string>feed, id, version)})
+        return promise
+    }
+
 }

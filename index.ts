@@ -4,14 +4,13 @@ import { Edge, IVertex, Vertex } from './lib/Vertex'
 import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
 import { Query } from './lib/Query'
-import { GraphView, GRAPH_VIEW } from './lib/View'
+import { View, VertexQueries, GraphView, GRAPH_VIEW, STATIC_VIEW, StaticView } from './lib/View'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
 import * as Errors from './lib/Errors'
-import { View, VertexQueries } from './lib/View'
 import { ViewFactory } from './lib/ViewFactory'
 
-export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors, View, VertexQueries, GRAPH_VIEW }
+export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors, View, VertexQueries, GRAPH_VIEW, STATIC_VIEW }
 
 export class HyperGraphDB {
     readonly core: Core
@@ -25,6 +24,7 @@ export class HyperGraphDB {
         this.crawler = new Crawler(this.core)
         this.factory = new ViewFactory<GraphObject>(this.core, this.codec)
         this.factory.register(GRAPH_VIEW, (db, codec, tr) => new GraphView(db, codec, this.factory, tr))
+        this.factory.register(STATIC_VIEW, (db, codec, tr) => new StaticView(db, codec, this.factory, tr))
     }
 
     async put(vertex: Vertex<GraphObject> | Array<Vertex<GraphObject>>, feed?: string | Buffer) {
