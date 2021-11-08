@@ -100,6 +100,9 @@ export class HyperGraphDB {
     async createEdgesToPath<K extends GraphObject, T extends GraphObject>(path: string, root: Vertex<K>, leaf?: Vertex<T>) {
         const self = this
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
+        if(parts.length === 0) {
+            return [] // nothing to do
+        }
         let leafName = ''
         if(leaf) {
             leafName = parts.splice(parts.length-1, 1)[0]
