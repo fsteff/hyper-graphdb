@@ -7,6 +7,7 @@ import { Query } from './lib/Query'
 import { View, VertexQueries, GraphView, GRAPH_VIEW, STATIC_VIEW, StaticView } from './lib/View'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
+import { QueryState } from './lib/QueryControl'
 import * as Errors from './lib/Errors'
 import { ViewFactory } from './lib/ViewFactory'
 
@@ -67,7 +68,7 @@ export class HyperGraphDB {
             vertices.push(promise)
         }
         if(!view) view = this.factory.get(GRAPH_VIEW, transactions)
-        return view.query(Generator.from(vertices))
+        return view.query(Generator.from(vertices.map(async v => new QueryState<GraphObject>(await v, [], []))))
     }
 
     queryAtId(id: number, feed: string|Buffer, view?: View<GraphObject>): Query<GraphObject> {
@@ -81,7 +82,7 @@ export class HyperGraphDB {
         })
         
         if(!view) view = this.factory.get(GRAPH_VIEW, transactions)
-        return view.query(Generator.from([<Promise<IVertex<GraphObject>>>vertex]))
+        return view.query(Generator.from([(<Promise<IVertex<GraphObject>>>vertex).then(v => new QueryState<GraphObject>(v, [], []))]))
     }
 
     queryAtVertex(vertex: Vertex<GraphObject>, view?: View<GraphObject>): Query<GraphObject> {

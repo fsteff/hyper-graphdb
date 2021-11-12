@@ -31,6 +31,13 @@ var GraphContent = exports.GraphContent = {
   decode: null
 }
 
+var Restriction = exports.Restriction = {
+  buffer: true,
+  encodingLength: null,
+  encode: null,
+  decode: null
+}
+
 var Map_string_bytes = exports.Map_string_bytes = {
   buffer: true,
   encodingLength: null,
@@ -41,6 +48,7 @@ var Map_string_bytes = exports.Map_string_bytes = {
 defineVertex()
 defineEdge()
 defineGraphContent()
+defineRestriction()
 defineMap_string_bytes()
 
 function defineVertex () {
@@ -194,6 +202,14 @@ function defineEdge () {
         length += 1 + len
       }
     }
+    if (defined(obj.restrictions)) {
+      for (var i = 0; i < obj.restrictions.length; i++) {
+        if (!defined(obj.restrictions[i])) continue
+        var len = Restriction.encodingLength(obj.restrictions[i])
+        length += varint.encodingLength(len)
+        length += 1 + len
+      }
+    }
     return length
   }
 
@@ -238,6 +254,16 @@ function defineEdge () {
         offset += Map_string_bytes.encode.bytes
       }
     }
+    if (defined(obj.restrictions)) {
+      for (var i = 0; i < obj.restrictions.length; i++) {
+        if (!defined(obj.restrictions[i])) continue
+        buf[offset++] = 58
+        varint.encode(Restriction.encodingLength(obj.restrictions[i]), buf, offset)
+        offset += varint.encode.bytes
+        Restriction.encode(obj.restrictions[i], buf, offset)
+        offset += Restriction.encode.bytes
+      }
+    }
     encode.bytes = offset - oldOffset
     return buf
   }
@@ -253,7 +279,8 @@ function defineEdge () {
       feed: null,
       version: 0,
       view: "",
-      metadata: {}
+      metadata: {},
+      restrictions: []
     }
     var found0 = false
     var found1 = false
@@ -295,6 +322,12 @@ function defineEdge () {
         var tmp = Map_string_bytes.decode(buf, offset, offset + len)
         obj.metadata[tmp.key] = tmp.value
         offset += Map_string_bytes.decode.bytes
+        break
+        case 7:
+        var len = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        obj.restrictions.push(Restriction.decode(buf, offset, offset + len))
+        offset += Restriction.decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)
@@ -365,6 +398,81 @@ function defineGraphContent () {
         case 2:
         obj.data = encodings.bytes.decode(buf, offset)
         offset += encodings.bytes.decode.bytes
+        break
+        default:
+        offset = skip(prefix & 7, buf, offset)
+      }
+    }
+  }
+}
+
+function defineRestriction () {
+  Restriction.encodingLength = encodingLength
+  Restriction.encode = encode
+  Restriction.decode = decode
+
+  function encodingLength (obj) {
+    var length = 0
+    if (!defined(obj.rule)) throw new Error("rule is required")
+    var len = encodings.string.encodingLength(obj.rule)
+    length += 1 + len
+    if (defined(obj.except)) {
+      var len = Restriction.encodingLength(obj.except)
+      length += varint.encodingLength(len)
+      length += 1 + len
+    }
+    return length
+  }
+
+  function encode (obj, buf, offset) {
+    if (!offset) offset = 0
+    if (!buf) buf = Buffer.allocUnsafe(encodingLength(obj))
+    var oldOffset = offset
+    if (!defined(obj.rule)) throw new Error("rule is required")
+    buf[offset++] = 10
+    encodings.string.encode(obj.rule, buf, offset)
+    offset += encodings.string.encode.bytes
+    if (defined(obj.except)) {
+      buf[offset++] = 18
+      varint.encode(Restriction.encodingLength(obj.except), buf, offset)
+      offset += varint.encode.bytes
+      Restriction.encode(obj.except, buf, offset)
+      offset += Restriction.encode.bytes
+    }
+    encode.bytes = offset - oldOffset
+    return buf
+  }
+
+  function decode (buf, offset, end) {
+    if (!offset) offset = 0
+    if (!end) end = buf.length
+    if (!(end <= buf.length && offset <= buf.length)) throw new Error("Decoded message is not valid")
+    var oldOffset = offset
+    var obj = {
+      rule: "",
+      except: null
+    }
+    var found0 = false
+    while (true) {
+      if (end <= offset) {
+        if (!found0) throw new Error("Decoded message is not valid")
+        decode.bytes = offset - oldOffset
+        return obj
+      }
+      var prefix = varint.decode(buf, offset)
+      offset += varint.decode.bytes
+      var tag = prefix >> 3
+      switch (tag) {
+        case 1:
+        obj.rule = encodings.string.decode(buf, offset)
+        offset += encodings.string.decode.bytes
+        found0 = true
+        break
+        case 2:
+        var len = varint.decode(buf, offset)
+        offset += varint.decode.bytes
+        obj.except = Restriction.decode(buf, offset, offset + len)
+        offset += Restriction.decode.bytes
         break
         default:
         offset = skip(prefix & 7, buf, offset)

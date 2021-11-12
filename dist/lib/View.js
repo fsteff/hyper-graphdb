@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StaticView = exports.GraphView = exports.View = exports.STATIC_VIEW = exports.GRAPH_VIEW = void 0;
 const Errors_1 = require("./Errors");
-const Generator_1 = require("./Generator");
 const Query_1 = require("./Query");
 exports.GRAPH_VIEW = 'GraphView';
 exports.STATIC_VIEW = 'StaticView';
@@ -53,6 +52,14 @@ class View {
     query(startAt) {
         return new Query_1.Query(this, startAt);
     }
+    toResult(v, edge, state) {
+        var _a;
+        let newState = state;
+        if (edge.restrictions && ((_a = edge.restrictions) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+            newState = newState.addRestrictions(v, edge.restrictions);
+        }
+        return { result: v, label: edge.label, state: state };
+    }
 }
 exports.View = View;
 class GraphView extends View {
@@ -60,21 +67,23 @@ class GraphView extends View {
         super(db, contentEncoding, factory, transactions);
         this.viewName = exports.GRAPH_VIEW;
     }
-    async out(vertex, label) {
+    async out(state, label) {
         var _a;
+        const vertex = state.value;
         if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
             throw new Error('GraphView.out does only accept persisted Vertex instances as input');
         }
         const edges = vertex.getEdges(label);
-        const vertices = new Array();
+        const vertices = [];
         for (const edge of edges) {
+            let newState = state;
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
             // TODO: version pinning does not work yet
-            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata);
+            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata).then(v => this.toResult(v, edge, state));
             promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
             vertices.push(promise);
         }
-        return Generator_1.Generator.from(vertices);
+        return vertices;
     }
 }
 exports.GraphView = GraphView;
@@ -83,21 +92,22 @@ class StaticView extends View {
         super(db, contentEncoding, factory, transactions);
         this.viewName = exports.STATIC_VIEW;
     }
-    async out(vertex, label) {
+    async out(state, label) {
         var _a;
+        const vertex = state.value;
         if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
             throw new Error('GraphView.out does only accept persisted Vertex instances as input');
         }
         const edges = vertex.getEdges(label);
-        const vertices = new Array();
+        const vertices = [];
         for (const edge of edges) {
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
             // TODO: version pinning does not work yet
-            const promise = this.get(feed, edge.ref);
+            const promise = this.get(feed, edge.ref).then(v => this.toResult(v, edge, state));
             promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
             vertices.push(promise);
         }
-        return Generator_1.Generator.from(vertices);
+        return vertices;
     }
     // ignores other views in metadata
     async get(feed, id, version) {

@@ -12,14 +12,25 @@ class Query {
         return this.view.query(filtered);
     }
     out(label, view) {
-        const vertexQuery = this.vertexQueries.flatMap(async (q) => (await (view || this.view).out(q, label)));
+        const self = this;
+        const vertexQuery = this.vertexQueries.flatMap(process);
         return (view || this.view).query(vertexQuery);
+        async function process(vertex, state) {
+            const result = await (view || self.view).out(state, label);
+            return makeState(result, state);
+        }
+        function makeState(result, state) {
+            return Generator_1.Generator.from(result.map(async (p) => p.then(r => (r.state || state).nextState(r.result, r.label))));
+        }
     }
     vertices() {
-        return this.vertexQueries.destruct();
+        return this.applyRules().destruct();
     }
     generator() {
-        return this.vertexQueries;
+        return this.applyRules();
+    }
+    values(extractor) {
+        return this.applyRules().map(async (v) => await extractor(v)).values();
     }
     repeat(operators, until, maxDepth) {
         const self = this;
@@ -28,14 +39,14 @@ class Query {
             let depth = 0;
             let mapped = new Array();
             let state = self;
-            let queries = await self.vertexQueries.destruct();
+            let queries = await self.applyRules().rawQueryStates();
             const results = new Array();
-            while ((!maxDepth || depth < maxDepth) && (!until || until(results)) && queries.length > 0) {
-                const newVertices = await self.leftDisjoint(queries, mapped, (a, b) => a.equals(b));
+            while ((!maxDepth || depth < maxDepth) && (!until || until(results.map(r => r.value))) && queries.length > 0) {
+                const newVertices = await self.leftDisjoint(queries, mapped, (a, b) => a.value.equals(b.value));
                 const subQuery = self.view.query(Generator_1.Generator.from(newVertices));
                 mapped = mapped.concat(newVertices);
                 state = await operators(subQuery);
-                queries = await state.vertexQueries.destruct();
+                queries = await state.applyRules().rawQueryStates();
                 for (const q of queries) {
                     yield q;
                     results.push(q);
@@ -44,8 +55,15 @@ class Query {
             }
         }
     }
-    values(extractor) {
-        return this.vertexQueries.map(async (v) => await extractor(v)).values();
+    applyRules() {
+        return this.vertexQueries.filter(rulesHold);
+        function rulesHold(_elem, state) {
+            for (const rule of state.rules) {
+                if (!rule.ruleHolds(state.path))
+                    return false;
+            }
+            return true;
+        }
     }
     async leftDisjoint(arr1, arr2, comparator) {
         const res = new Array();

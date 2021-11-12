@@ -2,16 +2,19 @@ import codecs from 'codecs'
 import { Transaction } from 'hyperobjects'
 import { Core } from './Core'
 import { EdgeTraversingError, VertexLoadingError } from './Errors'
-import { Generator } from './Generator'
+import { Generator} from './Generator'
 import { Query } from './Query'
 import { IVertex, Vertex } from './Vertex'
 import { ViewFactory } from './ViewFactory'
+import { QueryState } from './QueryControl'
+import { Edge } from '..'
 
 export const GRAPH_VIEW = 'GraphView'
 export const STATIC_VIEW = 'StaticView'
 
 export type Codec<T> = string | codecs.BaseCodec<T>
-export type VertexQueries<T> = Generator<IVertex<T>>
+export type VertexQueries<T> = Generator<T>
+export type QueryResult<T> = Array<Promise<{result: IVertex<T>, label: string, state?: QueryState<T>}>>
 
 export abstract class View<T> {
     protected readonly transactions: Map<string, Transaction>
@@ -68,7 +71,7 @@ export abstract class View<T> {
      * @param startAt Generator of vertices to start from
      * @returns a query
      */
-    public query(startAt: Generator<IVertex<T>>): Query<T> {
+    public query(startAt: VertexQueries<T>): Query<T> {
         return new Query(this, startAt)
     }
 
@@ -77,7 +80,15 @@ export abstract class View<T> {
      * @param vertex 
      * @param label 
      */
-    public abstract out(vertex: IVertex<T>, label?: string): Promise<VertexQueries<T>>
+    public abstract out(state: QueryState<T>, label?: string): Promise<QueryResult<T>>
+
+    protected toResult(v: IVertex<T>, edge: Edge, oldState: QueryState<T>): {result: IVertex<T>, label: string, state: QueryState<T>} {
+        let newState = oldState
+        if(edge.restrictions && edge.restrictions?.length > 0) {
+            newState = newState.addRestrictions(v, edge.restrictions)
+        }
+        return {result: v, label: edge.label, state: newState}
+    }
 
     
 }
@@ -90,20 +101,21 @@ export class GraphView<T> extends View<T> {
 
     }
 
-    public async out(vertex: Vertex<T>, label?: string):  Promise<VertexQueries<T>> {
+    public async out(state: QueryState<T>, label?: string): Promise<QueryResult<T>> {
+        const vertex = <Vertex<T>> state.value
         if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
             throw new Error('GraphView.out does only accept persisted Vertex instances as input')
         }
         const edges = vertex.getEdges(label)
-        const vertices = new Array<Promise<IVertex<T>>>()
+        const vertices: QueryResult<T> = []
         for(const edge of edges) {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
             // TODO: version pinning does not work yet
-            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata)
+            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata).then(v => this.toResult(v, edge, state))
             promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
             vertices.push(promise)
         }
-        return Generator.from(vertices)
+        return vertices
     }
 }
 
@@ -114,20 +126,21 @@ export class StaticView<T> extends View<T> {
         super(db, contentEncoding, factory, transactions)
     }
 
-    public async out(vertex: Vertex<T>, label?: string):  Promise<VertexQueries<T>> {
+    public async out(state: QueryState<T>, label?: string):  Promise<QueryResult<T>> {
+        const vertex = <Vertex<T>> state.value
         if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
             throw new Error('GraphView.out does only accept persisted Vertex instances as input')
         }
         const edges = vertex.getEdges(label)
-        const vertices = new Array<Promise<IVertex<T>>>()
+        const vertices: QueryResult<T> = []
         for(const edge of edges) {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
             // TODO: version pinning does not work yet
-            const promise = this.get(feed, edge.ref)
+            const promise = this.get(feed, edge.ref).then(v => this.toResult(v, edge, state))
             promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
             vertices.push(promise)
         }
-        return Generator.from(vertices)
+        return vertices
     }
 
     // ignores other views in metadata

@@ -36,42 +36,6 @@ tape('query', async t => {
     t.ok(v1.equals(results[0]))
 })
 
-tape('repeat query', async t => {
-    const store = new Corestore(RAM)
-    await store.ready()
-    const db = new HyperGraphDB(store)
-
-    const v = new Array<Vertex<SimpleGraphObject>>()
-    for(let i = 0; i < 100; i++) {
-        v[i] = db.create<SimpleGraphObject>()
-        v[i].setContent(new SimpleGraphObject().set('value', i))
-    }
-    await db.put(v)
-
-    for(let i = 0; i < 99; i++) {
-        v[i].addEdgeTo(v[i+1], 'next')
-    }
-    await db.put(v)
-
-    let results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).vertices()
-    t.same(99, results.length)
-    t.ok(v[1].equals(results[0]))
-
-    v[99].addEdgeTo(v[0], 'next')
-    await db.put(v[99])
-
-    t.timeoutAfter(1000)
-    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next')).generator().destruct()
-    t.same(100, results.length)
-    t.ok(v[1].equals(results[0]))
-
-    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), undefined, 10).generator().destruct()
-    t.same(10, results.length)
-
-    results = await db.queryAtVertex(v[0]).repeat(q => q.out('next'), arr => arr.findIndex(r => r.equals(v[10])) < 0).generator().destruct()
-    t.same(10, results.length)
-})
-
 tape('error handling', async t => {
     t.plan(3)
     const store = new Corestore(RAM)

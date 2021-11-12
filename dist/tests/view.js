@@ -9,24 +9,26 @@ const tape_1 = __importDefault(require("tape"));
 const View_1 = require("../lib/View");
 const __1 = require("..");
 const Codec_1 = require("../lib/Codec");
-const Generator_1 = require("../lib/Generator");
+const QueryControl_1 = require("../lib/QueryControl");
 class NextView extends View_1.View {
     constructor(db, contentEncoding, factory, transactions) {
         super(db, contentEncoding, factory, transactions);
         this.viewName = 'NextView';
     }
-    async out(vertex, label) {
+    async out(state, label) {
         var _a;
+        const vertex = state.value;
         if (!(vertex.getContent() instanceof Codec_1.SimpleGraphObject)) {
             throw new Error('Vertex is not a SimpleGraphObject');
         }
         const edges = vertex.getEdges(label);
-        const vertices = new Array();
+        const vertices = [];
         for (const edge of edges) {
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
-            vertices.push(this.get(feed, edge.ref, undefined, edge.view));
+            const res = this.get(feed, edge.ref, undefined, edge.view).then(v => this.toResult(v, edge, state));
+            vertices.push(res);
         }
-        return Generator_1.Generator.from(vertices);
+        return vertices;
     }
     async get(feed, id, version, viewDesc) {
         feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed;
@@ -34,10 +36,10 @@ class NextView extends View_1.View {
         const tr = await this.getTransaction(feed, version);
         const vertex = await this.db.getInTransaction(id, this.codec, tr, feed);
         const view = this.getView(viewDesc);
-        const next = await (await view.out(vertex, 'next')).destruct();
+        const next = await (await view.out(new QueryControl_1.QueryState(vertex, [], []), 'next'));
         if (next.length === 0)
             throw new Error('vertex has no edge "next", cannot use NextView');
-        return next[0];
+        return (await next[0]).result;
     }
 }
 tape_1.default('query with view', async (t) => {

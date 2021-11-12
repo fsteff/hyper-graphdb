@@ -40,6 +40,7 @@ Object.defineProperty(exports, "GRAPH_VIEW", { enumerable: true, get: function (
 Object.defineProperty(exports, "STATIC_VIEW", { enumerable: true, get: function () { return View_1.STATIC_VIEW; } });
 const Generator_1 = require("./lib/Generator");
 Object.defineProperty(exports, "Generator", { enumerable: true, get: function () { return Generator_1.Generator; } });
+const QueryControl_1 = require("./lib/QueryControl");
 const Errors = __importStar(require("./lib/Errors"));
 exports.Errors = Errors;
 const ViewFactory_1 = require("./lib/ViewFactory");
@@ -92,7 +93,7 @@ class HyperGraphDB {
         }
         if (!view)
             view = this.factory.get(View_1.GRAPH_VIEW, transactions);
-        return view.query(Generator_1.Generator.from(vertices));
+        return view.query(Generator_1.Generator.from(vertices.map(async (v) => new QueryControl_1.QueryState(await v, [], []))));
     }
     queryAtId(id, feed, view) {
         const transactions = new Map();
@@ -105,7 +106,7 @@ class HyperGraphDB {
         });
         if (!view)
             view = this.factory.get(View_1.GRAPH_VIEW, transactions);
-        return view.query(Generator_1.Generator.from([vertex]));
+        return view.query(Generator_1.Generator.from([vertex.then(v => new QueryControl_1.QueryState(v, [], []))]));
     }
     queryAtVertex(vertex, view) {
         return this.queryAtId(vertex.getId(), vertex.getFeed(), view);

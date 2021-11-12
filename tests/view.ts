@@ -2,13 +2,14 @@ import RAM from 'random-access-memory'
 import Corestore from 'corestore'
 import tape from 'tape'
 import { IVertex, Vertex } from '../lib/Vertex'
-import { View, Codec, VertexQueries, GRAPH_VIEW } from '../lib/View'
+import { View, Codec, VertexQueries, GRAPH_VIEW, QueryResult } from '../lib/View'
 import { HyperGraphDB } from '..'
 import { SimpleGraphObject } from '../lib/Codec'
 import { Core } from '../lib/Core'
 import { ViewFactory } from '../lib/ViewFactory'
 import { Transaction } from 'hyperobjects'
 import { Generator } from '../lib/Generator'
+import { QueryState } from '../lib/QueryControl'
 
 class NextView<SimpleGraphObject> extends View<SimpleGraphObject> {
     public readonly viewName = 'NextView'
@@ -18,18 +19,20 @@ class NextView<SimpleGraphObject> extends View<SimpleGraphObject> {
 
     }
 
-    public async out(vertex: Vertex<SimpleGraphObject>, label?: string):  Promise<VertexQueries<SimpleGraphObject>> {
+    public async out(state: QueryState<SimpleGraphObject>, label?: string):  Promise<QueryResult<SimpleGraphObject>> {
+        const vertex = <Vertex<SimpleGraphObject>> state.value
         if(!(vertex.getContent() instanceof SimpleGraphObject)) {
             throw new Error('Vertex is not a SimpleGraphObject')
         }
         const edges = vertex.getEdges(label)
-        const vertices = new Array<Promise<IVertex<SimpleGraphObject>>>()
+        const vertices: QueryResult<SimpleGraphObject> = []
         for(const edge of edges) {
             const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
-            vertices.push(this.get(feed, edge.ref, undefined, edge.view))
+            const res = this.get(feed, edge.ref, undefined, edge.view).then(v => this.toResult(v, edge, state))
+            vertices.push(res)
         }
         
-        return Generator.from(vertices)
+        return vertices
     }
 
     public async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string) : Promise<IVertex<SimpleGraphObject>>{
@@ -40,9 +43,9 @@ class NextView<SimpleGraphObject> extends View<SimpleGraphObject> {
         const vertex = await this.db.getInTransaction<SimpleGraphObject>(id, this.codec, tr, feed)
 
         const view = this.getView(viewDesc)
-        const next = await (await view.out(vertex, 'next')).destruct()
+        const next = await (await view.out(new QueryState(vertex, [], []),'next'))
         if(next.length === 0) throw new Error('vertex has no edge "next", cannot use NextView')
-        return next[0]
+        return (await next[0]).result
     }
 }
 

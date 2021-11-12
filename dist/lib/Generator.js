@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Generator = void 0;
+exports.Generator = exports.GeneratorT = void 0;
 const streamx_1 = require("streamx");
-class Generator {
+class GeneratorT {
     constructor(gen) {
         this.gen = gen;
     }
@@ -17,51 +17,63 @@ class Generator {
             else if (elem instanceof Error)
                 throw elem;
             else
-                arr.push(elem);
+                arr.push(elem.value);
         }
         return arr;
     }
     stream(onError) {
         return streamx_1.Readable.from(this.handleOrThrowErrors(onError));
     }
+    async rawQueryStates(onError) {
+        const arr = new Array();
+        for await (const elem of this.gen) {
+            if (elem instanceof Error && onError)
+                onError(elem);
+            else if (elem instanceof Error)
+                throw elem;
+            else
+                arr.push(elem);
+        }
+        return arr;
+    }
     filter(predicate) {
         const self = this;
-        return new Generator(filter());
+        return new GeneratorT(filter());
         async function* filter() {
             for await (const elem of self.gen) {
                 if (elem instanceof Error)
                     yield elem;
-                else if (await predicate(elem))
+                else if (await predicate(elem.value, elem))
                     yield elem;
             }
         }
     }
     map(mapper) {
         const self = this;
-        return new Generator(map());
+        return new GeneratorT(map());
         async function* map() {
             for await (const elem of self.gen) {
                 if (elem instanceof Error)
                     yield elem;
                 else
-                    yield await self.wrapAsync(mapper, elem).catch(err => err); // converts thrown error to Error even if the mapper is not async
+                    yield await self.wrapAsync(mapper, elem.value, elem).catch(err => err); // converts thrown error to Error even if the mapper is not async
             }
         }
     }
     flatMap(mapper) {
         const self = this;
-        return new Generator(map());
+        return new GeneratorT(map());
         async function* map() {
             for await (const elem of self.gen) {
                 if (elem instanceof Error) {
                     yield elem;
                 }
                 else {
-                    let mapped = await self.wrapAsync(mapper, elem).catch(err => err);
+                    let mapped = await self.wrapAsync(mapper, elem.value, elem).catch(err => err);
                     if (mapped instanceof Error) {
                         yield mapped;
                     }
-                    else if (mapped instanceof Generator) {
+                    else if (mapped instanceof GeneratorT) {
                         for await (const res of mapped.gen) {
                             yield res;
                         }
@@ -79,7 +91,7 @@ class Generator {
         }
     }
     static from(promises) {
-        return new Generator(generate());
+        return new GeneratorT(generate());
         async function* generate() {
             for (const p of promises) {
                 try {
@@ -104,13 +116,16 @@ class Generator {
                 else if (elem instanceof Error)
                     throw elem;
                 else
-                    yield elem;
+                    yield elem.value;
             }
         }
     }
     async wrapAsync(foo, ...args) {
         return foo(...args);
     }
+}
+exports.GeneratorT = GeneratorT;
+class Generator extends GeneratorT {
 }
 exports.Generator = Generator;
 //# sourceMappingURL=Generator.js.map

@@ -24,11 +24,13 @@
   },
   "homepage": "https://github.com/fsteff/hyper-graphdb#readme",
   "dependencies": {
+    "@types/minimatch": "^3.0.5",
     "@types/streamx": "^2.9.1",
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
     "hyperobjects": "^0.3.0",
     "is-loopback-addr": "^1.0.1",
+    "minimatch": "^3.0.4",
     "protocol-buffers": "^4.2.0",
     "streamx": "^2.10.1"
   },
