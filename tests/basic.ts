@@ -30,7 +30,7 @@ tape('core', async t => {
     t.same(JSON.stringify(v2.getContent()), JSON.stringify({hello: 'world'}))
     t.same(JSON.stringify(v.getContent()), JSON.stringify({hello: 'world'}))
 
-    v1.addEdgeTo(v2, 'snd', feed)
+    v1.addEdgeTo(v2, 'snd', {feed})
     await db.put(feed, v1)
     t.same(v1.getId(), v1.getId())
 
@@ -51,7 +51,7 @@ tape('crawler', async t => {
     const v1 = new Vertex<Buffer>('binary')
     const v2 = new Vertex<Object>('binary')
     await db.putAll(feed, [v1, v2])
-    v1.addEdgeTo(v2, 'child', await db.getDefaultFeedId())
+    v1.addEdgeTo(v2, 'child', {feed: await db.getDefaultFeedId()})
     v2.addEdgeTo(v1, 'parent')
     await db.putAll(feed, [v1, v2])
 

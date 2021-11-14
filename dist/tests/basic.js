@@ -31,7 +31,7 @@ tape_1.default('core', async (t) => {
     v = await db.get(feed, v2.getId(), 'json');
     t.same(JSON.stringify(v2.getContent()), JSON.stringify({ hello: 'world' }));
     t.same(JSON.stringify(v.getContent()), JSON.stringify({ hello: 'world' }));
-    v1.addEdgeTo(v2, 'snd', feed);
+    v1.addEdgeTo(v2, 'snd', { feed });
     await db.put(feed, v1);
     t.same(v1.getId(), v1.getId());
     v = await db.get(feed, v1.getId(), 'utf-8');
@@ -49,7 +49,7 @@ tape_1.default('crawler', async (t) => {
     const v1 = new Vertex_1.Vertex('binary');
     const v2 = new Vertex_1.Vertex('binary');
     await db.putAll(feed, [v1, v2]);
-    v1.addEdgeTo(v2, 'child', await db.getDefaultFeedId());
+    v1.addEdgeTo(v2, 'child', { feed: await db.getDefaultFeedId() });
     v2.addEdgeTo(v1, 'parent');
     await db.putAll(feed, [v1, v2]);
     const crawler = new Crawler_1.default(db);

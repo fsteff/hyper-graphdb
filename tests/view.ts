@@ -62,8 +62,8 @@ tape('query with view', async t => {
     v2.setContent(new SimpleGraphObject().set('greeting', 'hola'))
     v3.setContent(new SimpleGraphObject().set('greeting', 'salut'))
     await db.put([v1, v2, v3])
-    v1.addEdgeTo(v2, 'next', feed, undefined, 'NextView')
-    v2.addEdgeTo(v3, 'next', feed, undefined, 'GraphView')
+    v1.addEdgeTo(v2, 'next', {feed, view: 'NextView'})
+    v2.addEdgeTo(v3, 'next', {feed, view: 'GraphView'})
     await db.put([v1, v2])
 
     let results = await db.queryAtVertex(v1).out('next').generator().destruct()

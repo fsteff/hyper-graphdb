@@ -47,7 +47,7 @@ export class QueryStateT<V, T extends IVertex<V>> {
     constructor(readonly value: T, readonly path: QueryPath<V>, readonly rules: QueryRule<V>[]){}
 
     nextState(vertex: T, label: string): QueryStateT<V,T> {
-        return new QueryStateT<V, T>(vertex, this.path.concat(this.path, [{label, vertex}]), this.rules)
+        return new QueryStateT<V, T>(vertex, this.path.concat([{label, vertex}]), this.rules)
     }
 
     addRestrictions(vertex: T, restrictions: Restriction[]): QueryStateT<V,T> {

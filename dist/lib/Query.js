@@ -41,18 +41,31 @@ class Query {
             let state = self;
             let queries = await self.applyRules().rawQueryStates();
             const results = new Array();
-            while ((!maxDepth || depth < maxDepth) && (!until || until(results.map(r => r.value))) && queries.length > 0) {
+            while ((!maxDepth || depth < maxDepth) && (!until || until(await Generator_1.Generator.from(results).filter(rulesHold).destruct())) && queries.length > 0) {
                 const newVertices = await self.leftDisjoint(queries, mapped, (a, b) => a.value.equals(b.value));
                 const subQuery = self.view.query(Generator_1.Generator.from(newVertices));
                 mapped = mapped.concat(newVertices);
                 state = await operators(subQuery);
-                queries = await state.applyRules().rawQueryStates();
+                queries = await state.vertexQueries.rawQueryStates();
                 for (const q of queries) {
-                    yield q;
+                    let allowed = true;
+                    for (const rule of q.rules) {
+                        if (!rule.ruleHolds(q.path))
+                            allowed = false;
+                    }
+                    if (allowed)
+                        yield q;
                     results.push(q);
                 }
                 depth++;
             }
+        }
+        function rulesHold(_elem, state) {
+            for (const rule of state.rules) {
+                if (!rule.ruleHolds(state.path))
+                    return false;
+            }
+            return true;
         }
     }
     applyRules() {

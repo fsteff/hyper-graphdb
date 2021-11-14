@@ -42,7 +42,7 @@ class QueryStateT {
         this.rules = rules;
     }
     nextState(vertex, label) {
-        return new QueryStateT(vertex, this.path.concat(this.path, [{ label, vertex }]), this.rules);
+        return new QueryStateT(vertex, this.path.concat([{ label, vertex }]), this.rules);
     }
     addRestrictions(vertex, restrictions) {
         const newRules = new QueryRule(vertex, restrictions);

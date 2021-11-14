@@ -52,13 +52,13 @@ class View {
     query(startAt) {
         return new Query_1.Query(this, startAt);
     }
-    toResult(v, edge, state) {
+    toResult(v, edge, oldState) {
         var _a;
-        let newState = state;
+        let newState = oldState;
         if (edge.restrictions && ((_a = edge.restrictions) === null || _a === void 0 ? void 0 : _a.length) > 0) {
             newState = newState.addRestrictions(v, edge.restrictions);
         }
-        return { result: v, label: edge.label, state: state };
+        return { result: v, label: edge.label, state: newState };
     }
 }
 exports.View = View;
@@ -76,7 +76,6 @@ class GraphView extends View {
         const edges = vertex.getEdges(label);
         const vertices = [];
         for (const edge of edges) {
-            let newState = state;
             const feed = ((_a = edge.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) || vertex.getFeed();
             // TODO: version pinning does not work yet
             const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata).then(v => this.toResult(v, edge, state));
