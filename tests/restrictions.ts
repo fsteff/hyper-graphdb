@@ -36,3 +36,49 @@ tape('query restrictions', async t => {
    t.same(all.length, 1)
    t.ok(all[0].equals(v4))
 })
+
+tape('restriction edge cases', async t => {
+    const store = new Corestore(RAM)
+    await store.ready()
+    const db = new HyperGraphDB(store)
+
+    const v1 = db.create<SimpleGraphObject>()
+    const v2 = db.create<SimpleGraphObject>()
+    const v3 = db.create<SimpleGraphObject>()
+    const v4 = db.create<SimpleGraphObject>()
+    const v5 = db.create<SimpleGraphObject>()
+    const v6 = db.create<SimpleGraphObject>()
+
+    //     a - (!) readme.txt
+    //    / 
+    // V1       c.doc
+    //    \   /
+    //     "b _"
+    //        \
+    //         (!) d.txt
+
+    await db.put([v1, v2, v3, v4, v5, v6])
+    v1.addEdgeTo(v2, 'a', {restrictions: [{rule: '!**/*.txt'}]})
+    v2.addEdgeTo(v3, 'readme.txt')
+    v1.addEdgeTo(v4, 'b _', {restrictions: [{rule: '!' + encodeURIComponent('b _') + '/*', except: {rule:  encodeURIComponent('b _') + '/c.doc'}}]})
+    v4.addEdgeTo(v5, 'c.doc')
+    v4.addEdgeTo(v6, 'd.txt')
+    await db.put([v1, v2, v4])
+
+   const a = await db.queryAtVertex(v1).out('a').out().vertices()
+   t.same(a, [])
+
+   const b = await db.queryAtVertex(v1).out('b _').out().vertices()
+   t.same(b.length, 1)
+   t.ok(b[0].equals(v5)) 
+   
+   const all = await db.queryAtVertex(v1).repeat(q => q.out()).vertices()
+   t.same(all.length, 3)
+   t.ok(all[0].equals(v2))
+   t.ok(all[1].equals(v4))
+   t.ok(all[2].equals(v5))
+
+   const sub = await db.queryAtVertex(v1).out().out().vertices()
+   t.same(sub.length, 1)
+   t.ok(b[0].equals(v5)) 
+})
