@@ -15,7 +15,8 @@ class QueryRule {
         while (path.length > 0 && !path[0].vertex.equals(this.startingAt)) {
             path = path.slice(1);
         }
-        const pathName = path.map(p => encodeURIComponent(p.label)).join('/');
+        const feedName = path.length > 0 ? path[path.length - 1].feed : this.startingAt.getFeed();
+        const pathName = feedName + '/' + path.map(p => encodeURIComponent(p.label)).join('/');
         for (const restriction of this.restrictions) {
             if (!restriction.allows(pathName))
                 return false;
@@ -41,8 +42,8 @@ class QueryStateT {
         this.path = path;
         this.rules = rules;
     }
-    nextState(vertex, label) {
-        return new QueryStateT(vertex, this.path.concat([{ label, vertex }]), this.rules);
+    nextState(vertex, label, feed) {
+        return new QueryStateT(vertex, this.path.concat([{ label, vertex, feed }]), this.rules);
     }
     addRestrictions(vertex, restrictions) {
         const newRules = new QueryRule(vertex, restrictions);

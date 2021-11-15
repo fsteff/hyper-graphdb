@@ -20,7 +20,21 @@ class Query {
             return makeState(result, state);
         }
         function makeState(result, state) {
-            return Generator_1.Generator.from(result.map(async (p) => p.then(r => (r.state || state).nextState(r.result, r.label))));
+            return Generator_1.Generator.from(result.map(async (p) => {
+                return p.then(r => {
+                    var _a;
+                    const feed = getFeed(r.result) || ((_a = state.path[state.path.length - 1]) === null || _a === void 0 ? void 0 : _a.feed);
+                    return (r.state || state).nextState(r.result, r.label, feed);
+                });
+            }));
+        }
+        function getFeed(v) {
+            if (typeof v.getFeed === 'function') {
+                return v.getFeed();
+            }
+            else {
+                return undefined;
+            }
         }
     }
     vertices() {

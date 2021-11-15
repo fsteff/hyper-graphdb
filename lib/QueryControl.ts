@@ -1,8 +1,8 @@
-import { IVertex } from ".."
+import { IVertex, Vertex } from ".."
 import { Restriction } from "./Vertex"
 import { makeRe } from "minimatch"
 
-export type QueryPath<T> = Array<{label: string, vertex: IVertex<T>}>
+export type QueryPath<T> = Array<{label: string, vertex: IVertex<T>, feed: string}>
 
 /**
  * Rules have to follow shell-style matching rules, for implementation details see https://www.npmjs.com/package/minimatch.
@@ -21,7 +21,8 @@ export class QueryRule<T> {
         while(path.length > 0 && ! path[0].vertex.equals(this.startingAt)) {
             path = path.slice(1)
         }
-        const pathName = path.map(p => encodeURIComponent(p.label)).join('/')
+        const feedName = path.length > 0 ? path[path.length-1].feed : (<Vertex<T>>this.startingAt).getFeed()
+        const pathName = feedName + '/' + path.map(p => encodeURIComponent(p.label)).join('/')
         for(const restriction of this.restrictions) {
             if(! restriction.allows(pathName)) return false
         }
@@ -46,8 +47,8 @@ export class QueryRestriction {
 export class QueryStateT<V, T extends IVertex<V>> {
     constructor(readonly value: T, readonly path: QueryPath<V>, readonly rules: QueryRule<V>[]){}
 
-    nextState(vertex: T, label: string): QueryStateT<V,T> {
-        return new QueryStateT<V, T>(vertex, this.path.concat([{label, vertex}]), this.rules)
+    nextState(vertex: T, label: string, feed: string): QueryStateT<V,T> {
+        return new QueryStateT<V, T>(vertex, this.path.concat([{label, vertex, feed}]), this.rules)
     }
 
     addRestrictions(vertex: T, restrictions: Restriction[]): QueryStateT<V,T> {

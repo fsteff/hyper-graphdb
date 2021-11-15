@@ -30,7 +30,20 @@ export class Query<T> {
         }
 
         function makeState(result: QueryResult<T>, state: QueryState<T>): Generator<T> {
-            return Generator.from(result.map(async p => p.then(r => (r.state || state).nextState(r.result, r.label))))
+            return Generator.from(result.map(async p => {
+                return p.then(r => {
+                    const feed = getFeed(r.result) || state.path[state.path.length - 1]?.feed;
+                    return (r.state || state).nextState(r.result, r.label, feed);
+                });
+            }))
+        }
+
+        function getFeed(v: IVertex<T>) {
+            if(typeof (<Vertex<T>>v).getFeed === 'function') {
+                return (<Vertex<T>>v).getFeed()
+            } else {
+                return undefined
+            }
         }
     }
 
