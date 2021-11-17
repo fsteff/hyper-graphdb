@@ -1,13 +1,97 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Generator = exports.GeneratorT = void 0;
-const streamx_1 = require("streamx");
+exports.Generator = exports.GeneratorT = exports.ValueGenerator = void 0;
+class ValueGenerator {
+    constructor(gen) {
+        this.gen = gen;
+    }
+    generator() {
+        return this.gen;
+    }
+    async destruct() {
+        const arr = new Array();
+        for await (const elem of this.gen) {
+            arr.push(elem);
+        }
+        return arr;
+    }
+    filter(predicate) {
+        const self = this;
+        return new ValueGenerator(filter());
+        async function* filter() {
+            for await (const elem of self.gen) {
+                if (await predicate(elem))
+                    yield elem;
+            }
+        }
+    }
+    map(mapper) {
+        const self = this;
+        return new ValueGenerator(map());
+        async function* map() {
+            for await (const elem of self.gen) {
+                yield await self.wrapAsync(mapper, elem);
+            }
+        }
+    }
+    flatMap(mapper) {
+        const self = this;
+        return new ValueGenerator(map());
+        async function* map() {
+            for await (const elem of self.gen) {
+                const mapped = await self.wrapAsync(mapper, elem);
+                if (mapped instanceof ValueGenerator) {
+                    for await (const res of mapped.gen) {
+                        yield res;
+                    }
+                }
+                else if (Array.isArray(mapped)) {
+                    for (const res of mapped) {
+                        yield await res;
+                    }
+                }
+            }
+        }
+    }
+    concat(other) {
+        const self = this;
+        return new ValueGenerator(gen());
+        async function* gen() {
+            for await (const value of self.gen) {
+                yield value;
+            }
+            for await (const value of other.gen) {
+                yield value;
+            }
+        }
+    }
+    static from(values) {
+        return new ValueGenerator(gen());
+        async function* gen() {
+            const elems = await values;
+            if (Array.isArray(elems)) {
+                for (const v of elems) {
+                    yield await v;
+                }
+            }
+            else {
+                for await (const v of elems.gen) {
+                    yield v;
+                }
+            }
+        }
+    }
+    async wrapAsync(foo, ...args) {
+        return foo(...args);
+    }
+}
+exports.ValueGenerator = ValueGenerator;
 class GeneratorT {
     constructor(gen) {
         this.gen = gen;
     }
     values(onError) {
-        return this.handleOrThrowErrors(onError);
+        return new ValueGenerator(this.handleOrThrowErrors(onError));
     }
     async destruct(onError) {
         const arr = new Array();
@@ -20,9 +104,6 @@ class GeneratorT {
                 arr.push(elem.value);
         }
         return arr;
-    }
-    stream(onError) {
-        return streamx_1.Readable.from(this.handleOrThrowErrors(onError));
     }
     async rawQueryStates(onError) {
         const arr = new Array();

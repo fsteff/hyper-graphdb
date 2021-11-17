@@ -1,9 +1,101 @@
-import { Readable } from 'streamx'
 import { IVertex } from '..'
-import {QueryPath, QueryRule, QueryState, QueryStateT} from './QueryControl'
-import { Restriction } from './Vertex'
+import {QueryStateT} from './QueryControl'
 
+export class ValueGenerator<T> {
+    protected gen: AsyncGenerator<T>
 
+    constructor(gen: AsyncGenerator<T>) {
+        this.gen = gen
+    }
+
+    generator() {
+        return this.gen
+    }
+
+    async destruct() {
+        const arr = new Array<T>()
+        for await (const elem of this.gen) {
+            arr.push(elem)
+        }
+        return arr
+    }
+
+    filter(predicate: (elem: T) => Promise<boolean>|boolean) {
+        const self = this
+        return new ValueGenerator(filter())
+
+        async function* filter() {
+            for await (const elem of self.gen) {
+                if (await predicate(elem)) yield elem
+            }
+        }
+    }
+
+    map<V>(mapper: (elem: T) => (V | Promise<V>)) {
+        const self = this
+        return new ValueGenerator<V>(map())
+        async function* map() {
+            for await (const elem of self.gen) {
+                yield await self.wrapAsync(mapper, elem)
+            }
+        }
+    }
+
+    flatMap<V>(mapper: (elem: T) => (V[] | Promise<V[]> | Promise<V>[] | Promise<Promise<V>[]> | ValueGenerator<V> | Promise<ValueGenerator<V>>)) {
+        const self = this
+        return new ValueGenerator<V>(map())
+        async function* map() {
+            for await (const elem of self.gen) {
+                const mapped: (V[] | Promise<V>[] | ValueGenerator<V>) = await self.wrapAsync(mapper, elem)
+                if(mapped instanceof ValueGenerator){
+                    for await (const res of mapped.gen) {
+                        yield res
+                    }
+                } else if(Array.isArray(mapped)){
+                    for (const res of mapped) {
+                        yield await res
+                    }
+                }
+            }
+        }
+    }
+
+    concat(other: ValueGenerator<T>) {
+        const self = this
+        return new ValueGenerator<T>(gen())
+
+        async function* gen() {
+            for await (const value of self.gen) {
+                yield value
+            }
+
+            for await (const value of other.gen) {
+                yield value
+            }
+        }
+    }
+
+    static from<V>(values: V[] | Promise<V[]> | Promise<V[]> | Promise<Promise<V>[]> | ValueGenerator<V> | Promise<ValueGenerator<V>>) {
+        return new ValueGenerator<V>(gen())
+
+        async function* gen() {
+            const elems = await values
+            if(Array.isArray(elems)) {
+                for(const v of elems) {
+                    yield await v
+                }
+            } else {
+                for await (const v of elems.gen) {
+                    yield v
+                }
+            }
+        }
+    }
+
+    private async wrapAsync(foo: (...args: any) => (any | Promise<any>), ...args) {
+        return foo(...args)
+    }
+}
 
 export class GeneratorT<V, T extends IVertex<V>> {
     protected gen: AsyncGenerator<QueryStateT<V, T> | Error>
@@ -12,8 +104,8 @@ export class GeneratorT<V, T extends IVertex<V>> {
         this.gen = gen
     }
 
-    values(onError?: (err: Error) => any) : AsyncGenerator<T>{
-        return this.handleOrThrowErrors(onError)
+    values(onError?: (err: Error) => any) : ValueGenerator<T>{
+        return new ValueGenerator(this.handleOrThrowErrors(onError))
     }
 
     async destruct(onError?: (err: Error) => any) {
@@ -24,10 +116,6 @@ export class GeneratorT<V, T extends IVertex<V>> {
             else arr.push(elem.value)
         }
         return arr
-    }
-
-    stream(onError?: (err: Error) => any) {
-        return Readable.from(this.handleOrThrowErrors(onError))
     }
 
     async rawQueryStates(onError?: (err: Error) => any) {

@@ -61,7 +61,7 @@ export class Query<T> {
     }
 
     values<V>(extractor: (v: IVertex<T>) => V | Promise<V>){
-        return this.applyRules().map(async v => await extractor(v)).values()
+        return this.applyRules().values().map(async v => await extractor(v)).generator()
     }
 
     repeat(operators: (query: Query<T>) => Query<T>, until?: (vertices: IVertex<T>[]) => boolean,  maxDepth?: number) : Query<T> {

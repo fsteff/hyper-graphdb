@@ -47,7 +47,7 @@ class Query {
         return this.applyRules();
     }
     values(extractor) {
-        return this.applyRules().map(async (v) => await extractor(v)).values();
+        return this.applyRules().values().map(async (v) => await extractor(v)).generator();
     }
     repeat(operators, until, maxDepth) {
         const self = this;

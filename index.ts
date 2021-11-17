@@ -6,12 +6,12 @@ import { Index } from './lib/Index'
 import { IntermediateReductor, Query } from './lib/Query'
 import { View, VertexQueries, GraphView, GRAPH_VIEW, STATIC_VIEW, StaticView, QueryResult } from './lib/View'
 import { Transaction } from 'hyperobjects'
-import { Generator } from './lib/Generator'
+import { Generator, ValueGenerator } from './lib/Generator'
 import { QueryState } from './lib/QueryControl'
 import * as Errors from './lib/Errors'
 import { ViewFactory } from './lib/ViewFactory'
 
-export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, Errors, View, VertexQueries, GRAPH_VIEW, STATIC_VIEW, QueryState, QueryResult }
+export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, ValueGenerator, Errors, View, VertexQueries, GRAPH_VIEW, STATIC_VIEW, QueryState, QueryResult }
 
 export class HyperGraphDB {
     readonly core: Core

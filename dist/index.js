@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HyperGraphDB = exports.QueryState = exports.STATIC_VIEW = exports.GRAPH_VIEW = exports.View = exports.Errors = exports.Generator = exports.Crawler = exports.Query = exports.Core = exports.SimpleGraphObject = exports.GraphObject = exports.Vertex = void 0;
+exports.HyperGraphDB = exports.QueryState = exports.STATIC_VIEW = exports.GRAPH_VIEW = exports.View = exports.Errors = exports.ValueGenerator = exports.Generator = exports.Crawler = exports.Query = exports.Core = exports.SimpleGraphObject = exports.GraphObject = exports.Vertex = void 0;
 const Core_1 = require("./lib/Core");
 Object.defineProperty(exports, "Core", { enumerable: true, get: function () { return Core_1.Core; } });
 const Codec_1 = require("./lib/Codec");
@@ -40,6 +40,7 @@ Object.defineProperty(exports, "GRAPH_VIEW", { enumerable: true, get: function (
 Object.defineProperty(exports, "STATIC_VIEW", { enumerable: true, get: function () { return View_1.STATIC_VIEW; } });
 const Generator_1 = require("./lib/Generator");
 Object.defineProperty(exports, "Generator", { enumerable: true, get: function () { return Generator_1.Generator; } });
+Object.defineProperty(exports, "ValueGenerator", { enumerable: true, get: function () { return Generator_1.ValueGenerator; } });
 const QueryControl_1 = require("./lib/QueryControl");
 Object.defineProperty(exports, "QueryState", { enumerable: true, get: function () { return QueryControl_1.QueryState; } });
 const Errors = __importStar(require("./lib/Errors"));
