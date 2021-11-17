@@ -37,6 +37,9 @@ class Query {
             }
         }
     }
+    reduce(reductor) {
+        return this.view.query(Generator_1.Generator.from(this.vertexQueries.rawQueryStates().then(reductor)));
+    }
     vertices() {
         return this.applyRules().destruct();
     }

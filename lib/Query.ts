@@ -4,6 +4,7 @@ import { QueryResult, VertexQueries, View } from './View'
 import { QueryState, QueryStateT} from './QueryControl'
 
 type QueryPredicate<T> = (v: IVertex<T>) => boolean | Promise<boolean>
+export type IntermediateReductor<T> = (array: QueryState<T>[]) => Promise<QueryState<T>[]> | QueryState<T>[]
 
 export class Query<T> {
     private vertexQueries: VertexQueries<T>
@@ -45,6 +46,10 @@ export class Query<T> {
                 return undefined
             }
         }
+    }
+
+    reduce(reductor: IntermediateReductor<T>): Query<T> {
+        return this.view.query(Generator.from(this.vertexQueries.rawQueryStates().then(reductor)))
     }
 
     vertices() {

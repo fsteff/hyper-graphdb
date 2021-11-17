@@ -93,7 +93,7 @@ class GeneratorT {
     static from(promises) {
         return new GeneratorT(generate());
         async function* generate() {
-            for (const p of promises) {
+            for (const p of await promises) {
                 try {
                     yield await p;
                 }

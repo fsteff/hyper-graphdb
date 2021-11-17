@@ -90,11 +90,11 @@ export class GeneratorT<V, T extends IVertex<V>> {
         }
     }
 
-    static from<V,T extends IVertex<V>>(promises:QueryStateT<V,T>[] | Promise<QueryStateT<V,T>>[]) {
+    static from<V,T extends IVertex<V>>(promises:QueryStateT<V,T>[] | Promise<QueryStateT<V,T>>[] | Promise<QueryStateT<V,T>[]>) {
         return new GeneratorT<V,T>(generate())
 
         async function* generate() {
-            for (const p of promises) {
+            for (const p of await promises) {
                 try {
                     yield await p
                 } catch (err) {

@@ -111,10 +111,14 @@ class HyperGraphDB {
     queryAtVertex(vertex, view) {
         return this.queryAtId(vertex.getId(), vertex.getFeed(), view);
     }
-    queryPathAtVertex(path, vertex, view) {
+    queryPathAtVertex(path, vertex, view, intermediateReductor) {
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0);
         let last = this.queryAtVertex(vertex, view);
-        for (const next of parts) {
+        for (let i = 0; i < parts.length; i++) {
+            const next = parts[i];
+            if (intermediateReductor && i > 0) {
+                last = last.reduce(intermediateReductor);
+            }
             last = last.out(next);
         }
         return last;

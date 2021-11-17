@@ -3,7 +3,7 @@ import { Codec, SimpleGraphObject, GraphObject } from './lib/Codec'
 import { Edge, IVertex, Vertex } from './lib/Vertex'
 import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
-import { Query } from './lib/Query'
+import { IntermediateReductor, Query } from './lib/Query'
 import { View, VertexQueries, GraphView, GRAPH_VIEW, STATIC_VIEW, StaticView } from './lib/View'
 import { Transaction } from 'hyperobjects'
 import { Generator } from './lib/Generator'
@@ -89,10 +89,14 @@ export class HyperGraphDB {
         return this.queryAtId(vertex.getId(), <string> vertex.getFeed(), view)
     }
 
-    queryPathAtVertex<T extends GraphObject>(path: string, vertex: Vertex<T>, view?: View<GraphObject>) : Query<GraphObject> {
+    queryPathAtVertex(path: string, vertex: Vertex<GraphObject>, view?: View<GraphObject>, intermediateReductor?: IntermediateReductor<GraphObject>) : Query<GraphObject> {
         const parts = path.replace(/\\/g, '/').split('/').filter(s => s.length > 0)
         let last = this.queryAtVertex(vertex, view)
-        for(const next of parts) {
+        for(let i = 0; i < parts.length; i++) {
+            const next = parts[i]
+            if(intermediateReductor && i > 0){
+                last = last.reduce(intermediateReductor)
+            }
             last = last.out(next)
         }
         return last
