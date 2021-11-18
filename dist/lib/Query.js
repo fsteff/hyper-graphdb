@@ -43,6 +43,9 @@ class Query {
     vertices() {
         return this.applyRules().destruct();
     }
+    states() {
+        return this.applyRules().rawQueryStates();
+    }
     generator() {
         return this.applyRules();
     }

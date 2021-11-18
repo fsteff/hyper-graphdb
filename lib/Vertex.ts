@@ -104,6 +104,15 @@ export class Vertex<T> implements IVertex<T> {
         this.edges = this.edges.filter(predicate)
     }
 
+    replaceEdgeTo(vertex: Vertex<any>, mapper: (edge: Edge) => Edge) {
+        const feed = this.getFeed() === vertex.getFeed() ? undefined : vertex.getFeed()
+        const edge = this.edges.find(e => e.ref === vertex.getId() && (e.feed?.toString('hex') === feed || e.feed?.toString('hex') === vertex.getFeed()))
+        if(!edge) {
+            throw new Error('replaceEdgeTo: there is no edge to ' + vertex.getId() + '@' + vertex.getFeed())
+        }
+        Object.assign(edge, mapper(edge))
+    }
+
     encode() {
         const copy = Object.assign({}, this)
         copy.content = copy.content || null

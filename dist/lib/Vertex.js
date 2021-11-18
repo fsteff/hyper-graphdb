@@ -95,6 +95,14 @@ class Vertex {
             predicate = e => e !== ref;
         this.edges = this.edges.filter(predicate);
     }
+    replaceEdgeTo(vertex, mapper) {
+        const feed = this.getFeed() === vertex.getFeed() ? undefined : vertex.getFeed();
+        const edge = this.edges.find(e => { var _a, _b; return e.ref === vertex.getId() && (((_a = e.feed) === null || _a === void 0 ? void 0 : _a.toString('hex')) === feed || ((_b = e.feed) === null || _b === void 0 ? void 0 : _b.toString('hex')) === vertex.getFeed()); });
+        if (!edge) {
+            throw new Error('replaceEdgeTo: there is no edge to ' + vertex.getId() + '@' + vertex.getFeed());
+        }
+        Object.assign(edge, mapper(edge));
+    }
     encode() {
         const copy = Object.assign({}, this);
         copy.content = copy.content || null;

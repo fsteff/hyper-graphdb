@@ -25,7 +25,7 @@ export class Query<T> {
         const vertexQuery = this.vertexQueries.flatMap(process)
         return (view || this.view).query(vertexQuery)
 
-        async function process(vertex: IVertex<T>, state: QueryState<T>) {
+        async function process(_vertex: IVertex<T>, state: QueryState<T>) {
             const result = await (view || self.view).out(state, label)
             return makeState(result, state)
         }
@@ -54,6 +54,10 @@ export class Query<T> {
 
     vertices() {
         return this.applyRules().destruct()
+    }
+
+    states() {
+        return this.applyRules().rawQueryStates()
     }
 
     generator() {

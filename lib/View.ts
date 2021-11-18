@@ -46,6 +46,7 @@ export abstract class View<T> {
         }
     }
 
+    // TODO: public async get(edge: Edge, state: QueryState) => Promise<{result: IVertex<T>, label: string, state: QueryState<T>}>
     public async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string, metadata?: Object) : Promise<IVertex<T>>{
         feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
 

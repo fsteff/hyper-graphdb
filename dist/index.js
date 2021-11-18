@@ -22,7 +22,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HyperGraphDB = exports.QueryState = exports.STATIC_VIEW = exports.GRAPH_VIEW = exports.View = exports.Errors = exports.ValueGenerator = exports.Generator = exports.Crawler = exports.Query = exports.Core = exports.SimpleGraphObject = exports.GraphObject = exports.Vertex = void 0;
+exports.HyperGraphDB = exports.QueryRule = exports.QueryState = exports.STATIC_VIEW = exports.GRAPH_VIEW = exports.View = exports.Errors = exports.ValueGenerator = exports.Generator = exports.Crawler = exports.Query = exports.Core = exports.SimpleGraphObject = exports.GraphObject = exports.Vertex = void 0;
 const Core_1 = require("./lib/Core");
 Object.defineProperty(exports, "Core", { enumerable: true, get: function () { return Core_1.Core; } });
 const Codec_1 = require("./lib/Codec");
@@ -43,6 +43,7 @@ Object.defineProperty(exports, "Generator", { enumerable: true, get: function ()
 Object.defineProperty(exports, "ValueGenerator", { enumerable: true, get: function () { return Generator_1.ValueGenerator; } });
 const QueryControl_1 = require("./lib/QueryControl");
 Object.defineProperty(exports, "QueryState", { enumerable: true, get: function () { return QueryControl_1.QueryState; } });
+Object.defineProperty(exports, "QueryRule", { enumerable: true, get: function () { return QueryControl_1.QueryRule; } });
 const Errors = __importStar(require("./lib/Errors"));
 exports.Errors = Errors;
 const ViewFactory_1 = require("./lib/ViewFactory");
