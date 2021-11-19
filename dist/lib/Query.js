@@ -15,8 +15,8 @@ class Query {
         const self = this;
         const vertexQuery = this.vertexQueries.flatMap(process);
         return (view || this.view).query(vertexQuery);
-        async function process(vertex, state) {
-            const result = await (view || self.view).out(state, label);
+        async function process(_vertex, state) {
+            const result = await (view || state.view || self.view).out(state, label);
             return makeState(result, state);
         }
         function makeState(result, state) {
@@ -24,7 +24,7 @@ class Query {
                 return p.then(r => {
                     var _a;
                     const feed = getFeed(r.result) || ((_a = state.path[state.path.length - 1]) === null || _a === void 0 ? void 0 : _a.feed);
-                    return (r.state || state).nextState(r.result, r.label, feed);
+                    return (r.state || state).nextState(r.result, r.label, feed, r.view || state.view);
                 });
             }));
         }

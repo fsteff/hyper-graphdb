@@ -14,7 +14,8 @@ export const STATIC_VIEW = 'StaticView'
 
 export type Codec<T> = string | codecs.BaseCodec<T>
 export type VertexQueries<T> = Generator<T>
-export type QueryResult<T> = Array<Promise<{result: IVertex<T>, label: string, state?: QueryState<T>}>>
+export type ViewGetResult<T> = Promise<{result: IVertex<T>, label: string, state?: QueryState<T>, view?: View<T>}>
+export type QueryResult<T> = Array<ViewGetResult<T>>
 
 export abstract class View<T> {
     protected readonly transactions: Map<string, Transaction>
@@ -46,24 +47,24 @@ export abstract class View<T> {
         }
     }
 
-    // TODO: public async get(edge: Edge, state: QueryState) => Promise<{result: IVertex<T>, label: string, state: QueryState<T>}>
-    public async get(feed: string|Buffer, id: number, version?: number, viewDesc?: string, metadata?: Object) : Promise<IVertex<T>>{
-        feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
+    public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): ViewGetResult<T> {
+        const feed = edge.feed.toString('hex')
 
-        if(viewDesc) {
-            const view = this.getView(viewDesc)
-            return view.get(feed, id, version, undefined, metadata)
-                .catch(err => {throw new VertexLoadingError(err, <string>feed, id, version)})
+        if(edge.view) {
+            const view = this.getView(edge.view)
+            return view.get({...edge, view: undefined}, state)
+                .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version)})
         }
 
-        const tr = await this.getTransaction(feed, version)
-        const promise = this.db.getInTransaction<T>(id, this.codec, tr, feed)
-        promise.catch(err => {throw new VertexLoadingError(err, <string>feed, id, version, viewDesc)})
-        return promise
+        // TODO: version pinning
+        const tr = await this.getTransaction(feed, undefined)
+        const vertex = await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
+            .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version, edge.view)})
+        return this.toResult(vertex, edge, state)
     }
 
     protected getView(name?: string): View<T> {
-        if(!name) return this
+        if(!name) return this.factory.get(GRAPH_VIEW, this.transactions)
         else return this.factory.get(name, this.transactions)
     }
 
@@ -83,12 +84,12 @@ export abstract class View<T> {
      */
     public abstract out(state: QueryState<T>, label?: string): Promise<QueryResult<T>>
 
-    protected toResult(v: IVertex<T>, edge: Edge, oldState: QueryState<T>): {result: IVertex<T>, label: string, state: QueryState<T>} {
+    protected toResult(v: IVertex<T>, edge: Edge, oldState: QueryState<T>): {result: IVertex<T>, label: string, state: QueryState<T>, view: View<T>} {
         let newState = oldState
         if(edge.restrictions && edge.restrictions?.length > 0) {
             newState = newState.addRestrictions(v, edge.restrictions)
         }
-        return {result: v, label: edge.label, state: newState}
+        return {result: v, label: edge.label, state: newState, view: this.getView(edge.view)}
     }
 
     
@@ -110,9 +111,8 @@ export class GraphView<T> extends View<T> {
         const edges = vertex.getEdges(label)
         const vertices: QueryResult<T> = []
         for(const edge of edges) {
-            const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
-            // TODO: version pinning does not work yet
-            const promise = this.get(feed, edge.ref, /*edge.version*/ undefined, edge.view, edge.metadata).then(v => this.toResult(v, edge, state))
+            const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
+            const promise = this.get({...edge, feed}, state)
             promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
             vertices.push(promise)
         }
@@ -135,9 +135,8 @@ export class StaticView<T> extends View<T> {
         const edges = vertex.getEdges(label)
         const vertices: QueryResult<T> = []
         for(const edge of edges) {
-            const feed =  edge.feed?.toString('hex') || <string>vertex.getFeed()
-            // TODO: version pinning does not work yet
-            const promise = this.get(feed, edge.ref).then(v => this.toResult(v, edge, state))
+            const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
+            const promise = this.get({...edge, feed}, state)
             promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
             vertices.push(promise)
         }
@@ -145,13 +144,13 @@ export class StaticView<T> extends View<T> {
     }
 
     // ignores other views in metadata
-    public async get(feed: string|Buffer, id: number, version?: number) : Promise<IVertex<T>>{
-        feed = Buffer.isBuffer(feed) ? feed.toString('hex') : feed
+    public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): ViewGetResult<T> {
+        const feed = edge.feed.toString('hex')
 
-        const tr = await this.getTransaction(feed, version)
-        const promise = this.db.getInTransaction<T>(id, this.codec, tr, feed)
-        promise.catch(err => {throw new VertexLoadingError(err, <string>feed, id, version)})
-        return promise
+        const tr = await this.getTransaction(feed, undefined)
+        const vertex = await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
+            .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version)})
+        return this.toResult(vertex, edge, state)
     }
 
 }

@@ -26,7 +26,7 @@ export class Query<T> {
         return (view || this.view).query(vertexQuery)
 
         async function process(_vertex: IVertex<T>, state: QueryState<T>) {
-            const result = await (view || self.view).out(state, label)
+            const result = await (view || state.view || self.view).out(state, label)
             return makeState(result, state)
         }
 
@@ -34,7 +34,7 @@ export class Query<T> {
             return Generator.from(result.map(async p => {
                 return p.then(r => {
                     const feed = getFeed(r.result) || state.path[state.path.length - 1]?.feed;
-                    return (r.state || state).nextState(r.result, r.label, feed);
+                    return (r.state || state).nextState(r.result, r.label, feed, r.view || state.view);
                 });
             }))
         }

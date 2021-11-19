@@ -37,17 +37,18 @@ class QueryRestriction {
 }
 exports.QueryRestriction = QueryRestriction;
 class QueryStateT {
-    constructor(value, path, rules) {
+    constructor(value, path, rules, view) {
         this.value = value;
         this.path = path;
         this.rules = rules;
+        this.view = view;
     }
-    nextState(vertex, label, feed) {
-        return new QueryStateT(vertex, this.path.concat([{ label, vertex, feed }]), this.rules);
+    nextState(vertex, label, feed, view) {
+        return new QueryStateT(vertex, this.path.concat([{ label, vertex, feed }]), this.rules, view);
     }
     addRestrictions(vertex, restrictions) {
         const newRules = new QueryRule(vertex, restrictions);
-        return new QueryStateT(this.value, this.path, this.rules.concat(newRules));
+        return new QueryStateT(this.value, this.path, this.rules.concat(newRules), this.view);
     }
 }
 exports.QueryStateT = QueryStateT;

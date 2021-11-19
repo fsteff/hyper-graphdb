@@ -1,4 +1,4 @@
-import { IVertex, Vertex } from ".."
+import { IVertex, Vertex, View } from ".."
 import { Restriction } from "./Vertex"
 import { makeRe } from "minimatch"
 
@@ -45,15 +45,15 @@ export class QueryRestriction {
 }
 
 export class QueryStateT<V, T extends IVertex<V>> {
-    constructor(readonly value: T, readonly path: QueryPath<V>, readonly rules: QueryRule<V>[]){}
+    constructor(readonly value: T, readonly path: QueryPath<V>, readonly rules: QueryRule<V>[], readonly view: View<V>){}
 
-    nextState(vertex: T, label: string, feed: string): QueryStateT<V,T> {
-        return new QueryStateT<V, T>(vertex, this.path.concat([{label, vertex, feed}]), this.rules)
+    nextState(vertex: T, label: string, feed: string, view: View<V>): QueryStateT<V,T> {
+        return new QueryStateT<V, T>(vertex, this.path.concat([{label, vertex, feed}]), this.rules, view)
     }
 
     addRestrictions(vertex: T, restrictions: Restriction[]): QueryStateT<V,T> {
         const newRules = new QueryRule<V>(vertex, restrictions)
-        return new QueryStateT<V,T>(this.value, this.path, this.rules.concat(newRules))
+        return new QueryStateT<V,T>(this.value, this.path, this.rules.concat(newRules), this.view)
     }
 }
 

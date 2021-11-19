@@ -94,9 +94,8 @@ class HyperGraphDB {
             const promise = tr.then(tr => this.core.getInTransaction(id, this.codec, tr, feed));
             vertices.push(promise);
         }
-        if (!view)
-            view = this.factory.get(View_1.GRAPH_VIEW, transactions);
-        return view.query(Generator_1.Generator.from(vertices.map(async (v) => new QueryControl_1.QueryState(await v, [], []))));
+        const usedView = (view || this.factory.get(View_1.GRAPH_VIEW, transactions));
+        return usedView.query(Generator_1.Generator.from(vertices.map(async (v) => new QueryControl_1.QueryState(await v, [], [], usedView))));
     }
     queryAtId(id, feed, view) {
         const transactions = new Map();
@@ -107,9 +106,8 @@ class HyperGraphDB {
             transactions.set(feed, tr);
             return v;
         });
-        if (!view)
-            view = this.factory.get(View_1.GRAPH_VIEW, transactions);
-        return view.query(Generator_1.Generator.from([vertex.then(v => new QueryControl_1.QueryState(v, [], []))]));
+        const usedView = (view || this.factory.get(View_1.GRAPH_VIEW, transactions));
+        return usedView.query(Generator_1.Generator.from([vertex.then(v => new QueryControl_1.QueryState(v, [], [], usedView))]));
     }
     queryAtVertex(vertex, view) {
         return this.queryAtId(vertex.getId(), vertex.getFeed(), view);
