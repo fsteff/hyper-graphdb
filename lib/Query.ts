@@ -108,7 +108,7 @@ export class Query<T> {
         }
     }
 
-    private applyRules() {
+    private applyRules(): Generator<T> {
         return this.vertexQueries.filter(rulesHold)
 
         function rulesHold(_elem: IVertex<T>, state: QueryState<T>) {
