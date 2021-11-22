@@ -55,6 +55,10 @@ export class QueryStateT<V, T extends IVertex<V>> {
         const newRules = new QueryRule<V>(vertex, restrictions)
         return new QueryStateT<V,T>(this.value, this.path, this.rules.concat(newRules), this.view)
     }
+
+    mergeStates(value?: T, path?: QueryPath<V>, rules?: QueryRule<V>[], view?: View<V>) {
+        return new QueryStateT<V, T>(value || this.value, path || this.path, rules || this.rules, view || this.view)
+    }
 }
 
 export class QueryState<T> extends QueryStateT<T, IVertex<T>> {}

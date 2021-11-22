@@ -50,6 +50,9 @@ class QueryStateT {
         const newRules = new QueryRule(vertex, restrictions);
         return new QueryStateT(this.value, this.path, this.rules.concat(newRules), this.view);
     }
+    mergeStates(value, path, rules, view) {
+        return new QueryStateT(value || this.value, path || this.path, rules || this.rules, view || this.view);
+    }
 }
 exports.QueryStateT = QueryStateT;
 class QueryState extends QueryStateT {
