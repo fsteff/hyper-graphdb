@@ -20,6 +20,24 @@ export class ValueGenerator<T> {
         return arr
     }
 
+    async first() {
+        const self = this
+        let iter = await this.gen.next()
+        const res = <T> iter.value
+        logErrors()
+        return res
+        
+        async function logErrors() {
+            while(!iter.done) {
+                try {
+                    iter = await self.gen.next()
+                } catch (err) {
+                    console.error('AsyncGenerator.first rest threw an error: ' + err)
+                }
+            }
+        }
+    }
+
     filter(predicate: (elem: T) => Promise<boolean>|boolean) {
         const self = this
         return new ValueGenerator(filter())

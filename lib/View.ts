@@ -14,8 +14,7 @@ export const STATIC_VIEW = 'StaticView'
 
 export type Codec<T> = string | codecs.BaseCodec<T>
 export type VertexQueries<T> = Generator<T>
-export type ViewGetResult<T> = Promise<{result: IVertex<T>, label: string, state?: QueryState<T>, view?: View<T>}>
-export type QueryResult<T> = Array<ViewGetResult<T>>
+export type QueryResult<T> = Array<Promise<{result: IVertex<T>, label: string, state?: QueryState<T>, view?: View<T>}>>
 
 export abstract class View<T> {
     protected readonly transactions: Map<string, Transaction>
@@ -47,7 +46,7 @@ export abstract class View<T> {
         }
     }
 
-    public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): ViewGetResult<T> {
+    public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): Promise<QueryResult<T>> {
         const feed = edge.feed.toString('hex')
 
         if(edge.view) {
@@ -60,7 +59,7 @@ export abstract class View<T> {
         const tr = await this.getTransaction(feed, undefined)
         const vertex = await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
             .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version, edge.view)})
-        return this.toResult(vertex, edge, state)
+        return [Promise.resolve(this.toResult(vertex, edge, state))]
     }
 
     protected getView(name?: string): View<T> {
@@ -77,19 +76,30 @@ export abstract class View<T> {
         return new Query(this, startAt)
     }
 
-    /**
-     * The out() function defines the core functionality of a view
-     * @param vertex 
-     * @param label 
-     */
-    public abstract out(state: QueryState<T>, label?: string): Promise<QueryResult<T>>
+    public async out(state: QueryState<T>, label?: string): Promise<QueryResult<T>> {
+        const vertex = <Vertex<T>> state.value
+        if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
+            throw new Error('View.out does only accept persisted Vertex instances as input')
+        }
+        const edges = vertex.getEdges(label)
+        const vertices: QueryResult<T> = []
+        for(const edge of edges) {
+            const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
+            const promise = this.get({...edge, feed}, state)
+            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
+            for(const res of await promise) {
+                vertices.push(res)
+            }
+        }
+        return vertices
+    }
 
     protected toResult(v: IVertex<T>, edge: Edge, oldState: QueryState<T>): {result: IVertex<T>, label: string, state: QueryState<T>, view: View<T>} {
         let newState = oldState
         if(edge.restrictions && edge.restrictions?.length > 0) {
             newState = newState.addRestrictions(v, edge.restrictions)
         }
-        return {result: v, label: edge.label, state: newState, view: this.getView(edge.view)}
+        return {result: v, label: edge.label, state: newState, view: newState.view}
     }
 
     
@@ -102,22 +112,6 @@ export class GraphView<T> extends View<T> {
         super(db, contentEncoding, factory, transactions)
 
     }
-
-    public async out(state: QueryState<T>, label?: string): Promise<QueryResult<T>> {
-        const vertex = <Vertex<T>> state.value
-        if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
-            throw new Error('GraphView.out does only accept persisted Vertex instances as input')
-        }
-        const edges = vertex.getEdges(label)
-        const vertices: QueryResult<T> = []
-        for(const edge of edges) {
-            const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
-            const promise = this.get({...edge, feed}, state)
-            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
-            vertices.push(promise)
-        }
-        return vertices
-    }
 }
 
 export class StaticView<T> extends View<T> {
@@ -127,30 +121,14 @@ export class StaticView<T> extends View<T> {
         super(db, contentEncoding, factory, transactions)
     }
 
-    public async out(state: QueryState<T>, label?: string):  Promise<QueryResult<T>> {
-        const vertex = <Vertex<T>> state.value
-        if(typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
-            throw new Error('GraphView.out does only accept persisted Vertex instances as input')
-        }
-        const edges = vertex.getEdges(label)
-        const vertices: QueryResult<T> = []
-        for(const edge of edges) {
-            const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
-            const promise = this.get({...edge, feed}, state)
-            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
-            vertices.push(promise)
-        }
-        return vertices
-    }
-
     // ignores other views in metadata
-    public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): ViewGetResult<T> {
+    public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): Promise<QueryResult<T>> {
         const feed = edge.feed.toString('hex')
 
         const tr = await this.getTransaction(feed, undefined)
         const vertex = await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
             .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version)})
-        return this.toResult(vertex, edge, state)
+        return [Promise.resolve(this.toResult(vertex, edge, state))]
     }
 
 }

@@ -37,7 +37,7 @@ class View {
         const tr = await this.getTransaction(feed, undefined);
         const vertex = await this.db.getInTransaction(edge.ref, this.codec, tr, feed)
             .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version, edge.view); });
-        return this.toResult(vertex, edge, state);
+        return [Promise.resolve(this.toResult(vertex, edge, state))];
     }
     getView(name) {
         if (!name)
@@ -53,13 +53,30 @@ class View {
     query(startAt) {
         return new Query_1.Query(this, startAt);
     }
+    async out(state, label) {
+        const vertex = state.value;
+        if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
+            throw new Error('View.out does only accept persisted Vertex instances as input');
+        }
+        const edges = vertex.getEdges(label);
+        const vertices = [];
+        for (const edge of edges) {
+            const feed = edge.feed || Buffer.from(vertex.getFeed(), 'hex');
+            const promise = this.get({ ...edge, feed }, state);
+            promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
+            for (const res of await promise) {
+                vertices.push(res);
+            }
+        }
+        return vertices;
+    }
     toResult(v, edge, oldState) {
         var _a;
         let newState = oldState;
         if (edge.restrictions && ((_a = edge.restrictions) === null || _a === void 0 ? void 0 : _a.length) > 0) {
             newState = newState.addRestrictions(v, edge.restrictions);
         }
-        return { result: v, label: edge.label, state: newState, view: this.getView(edge.view) };
+        return { result: v, label: edge.label, state: newState, view: newState.view };
     }
 }
 exports.View = View;
@@ -68,21 +85,6 @@ class GraphView extends View {
         super(db, contentEncoding, factory, transactions);
         this.viewName = exports.GRAPH_VIEW;
     }
-    async out(state, label) {
-        const vertex = state.value;
-        if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
-            throw new Error('GraphView.out does only accept persisted Vertex instances as input');
-        }
-        const edges = vertex.getEdges(label);
-        const vertices = [];
-        for (const edge of edges) {
-            const feed = edge.feed || Buffer.from(vertex.getFeed(), 'hex');
-            const promise = this.get({ ...edge, feed }, state);
-            promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
-            vertices.push(promise);
-        }
-        return vertices;
-    }
 }
 exports.GraphView = GraphView;
 class StaticView extends View {
@@ -90,28 +92,13 @@ class StaticView extends View {
         super(db, contentEncoding, factory, transactions);
         this.viewName = exports.STATIC_VIEW;
     }
-    async out(state, label) {
-        const vertex = state.value;
-        if (typeof vertex.getId !== 'function' || typeof vertex.getFeed !== 'function' || !vertex.getFeed()) {
-            throw new Error('GraphView.out does only accept persisted Vertex instances as input');
-        }
-        const edges = vertex.getEdges(label);
-        const vertices = [];
-        for (const edge of edges) {
-            const feed = edge.feed || Buffer.from(vertex.getFeed(), 'hex');
-            const promise = this.get({ ...edge, feed }, state);
-            promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
-            vertices.push(promise);
-        }
-        return vertices;
-    }
     // ignores other views in metadata
     async get(edge, state) {
         const feed = edge.feed.toString('hex');
         const tr = await this.getTransaction(feed, undefined);
         const vertex = await this.db.getInTransaction(edge.ref, this.codec, tr, feed)
             .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version); });
-        return this.toResult(vertex, edge, state);
+        return [Promise.resolve(this.toResult(vertex, edge, state))];
     }
 }
 exports.StaticView = StaticView;

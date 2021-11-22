@@ -4,14 +4,14 @@ import { Edge, IVertex, Vertex, Restriction } from './lib/Vertex'
 import Crawler from './lib/Crawler'
 import { Index } from './lib/Index'
 import { IntermediateReductor, Query } from './lib/Query'
-import { View, VertexQueries, GraphView, GRAPH_VIEW, STATIC_VIEW, StaticView, QueryResult, ViewGetResult } from './lib/View'
+import { View, VertexQueries, GraphView, GRAPH_VIEW, STATIC_VIEW, StaticView, QueryResult } from './lib/View'
 import { Transaction } from 'hyperobjects'
 import { Generator, ValueGenerator } from './lib/Generator'
 import { QueryState, QueryRule, QueryPath } from './lib/QueryControl'
 import * as Errors from './lib/Errors'
 import { ViewFactory } from './lib/ViewFactory'
 
-export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, ValueGenerator, Errors, View, VertexQueries, GRAPH_VIEW, STATIC_VIEW, QueryState, ViewGetResult, QueryResult,  QueryPath, QueryRule, Restriction }
+export {IVertex, Vertex, Edge, GraphObject, Index, SimpleGraphObject, Core, Corestore, Query, Crawler, Generator, ValueGenerator, Errors, View, VertexQueries, GRAPH_VIEW, STATIC_VIEW, QueryState, QueryResult,  QueryPath, QueryRule, Restriction }
 
 export class HyperGraphDB {
     readonly core: Core

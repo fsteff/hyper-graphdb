@@ -15,20 +15,6 @@ class NextView extends View_1.View {
         super(db, contentEncoding, factory, transactions);
         this.viewName = 'NextView';
     }
-    async out(state, label) {
-        const vertex = state.value;
-        if (!(vertex.getContent() instanceof Codec_1.SimpleGraphObject)) {
-            throw new Error('Vertex is not a SimpleGraphObject');
-        }
-        const edges = vertex.getEdges(label);
-        const vertices = [];
-        for (const edge of edges) {
-            const feed = edge.feed || Buffer.from(vertex.getFeed(), 'hex');
-            const res = this.get({ ...edge, feed }, state);
-            vertices.push(res);
-        }
-        return vertices;
-    }
     async get(edge, state) {
         const feed = edge.feed.toString('hex');
         const viewDesc = edge.view || View_1.GRAPH_VIEW;
@@ -38,7 +24,7 @@ class NextView extends View_1.View {
         const next = await view.out(new QueryControl_1.QueryState(vertex, [], [], view), 'next');
         if (next.length === 0)
             throw new Error('vertex has no edge "next", cannot use NextView');
-        return this.toResult((await next[0]).result, edge, state);
+        return [Promise.resolve(this.toResult((await next[0]).result, edge, state))];
     }
 }
 tape_1.default('query with view', async (t) => {
