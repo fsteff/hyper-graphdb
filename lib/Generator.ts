@@ -189,7 +189,7 @@ export class GeneratorT<V, T extends IVertex<V>> {
                             yield res
                         }
                     } else {
-                        yield new Error('mapper did not return Array or Generator')
+                        yield new Error('mapper did not return Array or Generator (mapper: ' + mapper + '): elem is ' + mapped)
                     }
                 }
             }

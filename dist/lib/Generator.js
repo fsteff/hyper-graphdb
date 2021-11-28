@@ -182,7 +182,7 @@ class GeneratorT {
                         }
                     }
                     else {
-                        yield new Error('mapper did not return Array or Generator');
+                        yield new Error('mapper did not return Array or Generator (mapper: ' + mapper + '): elem is ' + mapped);
                     }
                 }
             }
