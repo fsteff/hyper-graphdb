@@ -96,4 +96,22 @@ tape_1.default('restriction edge cases', async (t) => {
     t.same(sub.length, 1);
     t.ok(b[0].equals(v5));
 });
+tape_1.default('restrict version', async (t) => {
+    const store = new corestore_1.default(random_access_memory_1.default);
+    await store.ready();
+    const db = new __1.HyperGraphDB(store);
+    const feedId = (await db.core.getDefaultFeedId()).toString('hex');
+    const v1 = db.create();
+    const v2 = db.create();
+    const v3 = db.create();
+    await db.put([v1, v2, v3]);
+    v1.addEdgeTo(v2, 'a', { restrictions: [{ rule: v2.getFeed() + '#' + (v2.getVersion() + 1) + '/a/b', except: { rule: v2.getFeed() + '/a' } }] });
+    v2.addEdgeTo(v3, 'b');
+    await db.put([v1, v2]);
+    const a = await db.queryAtVertex(v1).out('a').vertices();
+    t.same(a.length, 1);
+    t.same(a[0].getId(), v2.getId());
+    const b = await db.queryAtVertex(v1).out('a').out('b').vertices();
+    t.same(b, []);
+});
 //# sourceMappingURL=restrictions.js.map

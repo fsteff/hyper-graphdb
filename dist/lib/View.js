@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StaticView = exports.GraphView = exports.View = exports.STATIC_VIEW = exports.GRAPH_VIEW = void 0;
 const Errors_1 = require("./Errors");
 const Query_1 = require("./Query");
+const QueryControl_1 = require("./QueryControl");
+const __1 = require("..");
 exports.GRAPH_VIEW = 'GraphView';
 exports.STATIC_VIEW = 'StaticView';
 class View {
@@ -14,17 +16,25 @@ class View {
     }
     async getTransaction(feed, version) {
         let feedId = feed;
-        if (version) {
-            feedId += '@' + version;
+        const maxVersion = typeof version === 'number' ? version : version === null || version === void 0 ? void 0 : version.restrictsVersion(feed);
+        if (maxVersion) {
+            feedId += '@' + maxVersion;
         }
         if (this.transactions.has(feedId)) {
             return this.transactions.get(feedId);
         }
         else {
-            const tr = await this.db.transaction(feed, undefined, version);
+            const tr = await this.db.transaction(feed, undefined, maxVersion);
             this.transactions.set(feedId, tr);
             return tr;
         }
+    }
+    async getVertex(edge, state) {
+        const feed = edge.feed.toString('hex');
+        // rules are evaluated after out(), therefore versions have to be pre-checked
+        const tr = await this.getTransaction(feed, this.pinnedVersion(edge) || state);
+        return await this.db.getInTransaction(edge.ref, this.codec, tr, feed)
+            .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version, edge.view); });
     }
     async get(edge, state) {
         const feed = edge.feed.toString('hex');
@@ -33,10 +43,7 @@ class View {
             return view.get({ ...edge, view: undefined }, state)
                 .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version); });
         }
-        // TODO: version pinning
-        const tr = await this.getTransaction(feed, undefined);
-        const vertex = await this.db.getInTransaction(edge.ref, this.codec, tr, feed)
-            .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version, edge.view); });
+        const vertex = await this.getVertex(edge, state);
         return [Promise.resolve(this.toResult(vertex, edge, state))];
     }
     getView(name) {
@@ -78,6 +85,13 @@ class View {
         }
         return { result: v, label: edge.label, state: newState, view: newState.view };
     }
+    pinnedVersion(edge) {
+        if (edge.restrictions) {
+            const feed = edge.feed.toString('hex');
+            const rules = new __1.QueryRule(undefined, edge.restrictions);
+            return QueryControl_1.QueryState.minVersion([rules], feed);
+        }
+    }
 }
 exports.View = View;
 class GraphView extends View {
@@ -94,10 +108,7 @@ class StaticView extends View {
     }
     // ignores other views in metadata
     async get(edge, state) {
-        const feed = edge.feed.toString('hex');
-        const tr = await this.getTransaction(feed, undefined);
-        const vertex = await this.db.getInTransaction(edge.ref, this.codec, tr, feed)
-            .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version); });
+        const vertex = await this.getVertex(edge, state);
         return [Promise.resolve(this.toResult(vertex, edge, state))];
     }
 }

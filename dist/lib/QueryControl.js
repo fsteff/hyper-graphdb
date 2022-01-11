@@ -23,16 +23,30 @@ class QueryRule {
         }
         return true;
     }
+    restrictsVersion(feed) {
+        return minVersion(this.restrictions.map(r => r.restrictsVersion(feed) || 0));
+    }
 }
 exports.QueryRule = QueryRule;
 class QueryRestriction {
     constructor(restriction) {
-        this.rule = minimatch_1.makeRe(restriction.rule, { nobrace: true, dot: true, noext: true, nocomment: true });
+        const firstSlash = restriction.rule.indexOf('/');
+        const feedRule = restriction.rule.slice(0, firstSlash);
+        const path = restriction.rule.slice(firstSlash);
+        const [feed, versionStr] = feedRule.split('#');
+        const rule = feed + path;
+        this.pinnedVersion = parseInt(versionStr);
+        this.pinnedFeed = /[0-9a-f]+/.test(feed) ? feed : undefined;
+        this.rule = minimatch_1.makeRe(rule, { nobrace: true, dot: true, noext: true, nocomment: true });
         if (restriction.except)
             this.except = new QueryRestriction(restriction.except);
     }
     allows(path) {
         return this.rule.test(path) || (this.except && this.except.allows(path));
+    }
+    restrictsVersion(feed) {
+        if (this.pinnedFeed === feed && this.pinnedVersion)
+            return this.pinnedVersion;
     }
 }
 exports.QueryRestriction = QueryRestriction;
@@ -53,9 +67,23 @@ class QueryStateT {
     mergeStates(value, path, rules, view) {
         return new QueryStateT(value || this.value, path || this.path, rules || this.rules, view || this.view);
     }
+    restrictsVersion(feed) {
+        var _a;
+        return minVersion((_a = this.rules) === null || _a === void 0 ? void 0 : _a.map(r => r.restrictsVersion(feed) || 0));
+    }
+    static minVersion(restrictions, feed) {
+        return minVersion(restrictions.map(r => r.restrictsVersion(feed) || 0));
+    }
 }
 exports.QueryStateT = QueryStateT;
 class QueryState extends QueryStateT {
 }
 exports.QueryState = QueryState;
+function minVersion(arr) {
+    if (!Array.isArray(arr) || arr.length === 0)
+        return undefined;
+    const filtered = arr.filter(v => typeof v === 'number' && v > 0 && isFinite(v));
+    if (filtered.length > 0)
+        return Math.min(...filtered);
+}
 //# sourceMappingURL=QueryControl.js.map

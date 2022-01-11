@@ -7,14 +7,14 @@ import { Query } from './Query'
 import { IVertex, Vertex } from './Vertex'
 import { ViewFactory } from './ViewFactory'
 import { QueryState } from './QueryControl'
-import { Edge } from '..'
+import { Edge, QueryRule } from '..'
 
 export const GRAPH_VIEW = 'GraphView'
 export const STATIC_VIEW = 'StaticView'
 
 export type Codec<T> = string | codecs.BaseCodec<T>
 export type VertexQueries<T> = Generator<T>
-export type QueryResult<T> = Array<Promise<{result: IVertex<T>, label: string, state?: QueryState<T>, view?: View<T>}>>
+export type QueryResult<T> = Array<Promise<{result: IVertex<T>, label: string, state?: QueryState<T>, view?: View<T>, version?: number}>>
 
 export abstract class View<T> {
     protected readonly transactions: Map<string, Transaction>
@@ -31,19 +31,28 @@ export abstract class View<T> {
         this.factory = factory
     }
 
-    protected async getTransaction(feed: string, version?: number) : Promise<Transaction>{
+    protected async getTransaction(feed: string, version?: number | QueryState<T>) : Promise<Transaction>{
         let feedId = feed
-        if(version) {
-            feedId += '@' + version
+        const maxVersion = typeof version === 'number' ? version : version?.restrictsVersion(feed)
+        if(maxVersion) {
+            feedId += '@' + maxVersion
         }
         if(this.transactions.has(feedId)) {
             return <Transaction>this.transactions.get(feedId)
         }
         else {
-            const tr = await this.db.transaction(feed, undefined, version)
+            const tr = await this.db.transaction(feed, undefined, maxVersion)
             this.transactions.set(feedId, tr)
             return tr
         }
+    }
+
+    protected async getVertex(edge: Edge & {feed: Buffer}, state?: QueryState<T>) {
+        const feed = edge.feed.toString('hex')
+        // rules are evaluated after out(), therefore versions have to be pre-checked
+        const tr = await this.getTransaction(feed, this.pinnedVersion(edge) || state)
+        return await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
+            .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version, edge.view)})
     }
 
     public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): Promise<QueryResult<T>> {
@@ -55,10 +64,7 @@ export abstract class View<T> {
                 .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version)})
         }
 
-        // TODO: version pinning
-        const tr = await this.getTransaction(feed, undefined)
-        const vertex = await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
-            .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version, edge.view)})
+        const vertex = await this.getVertex(edge, state)
         return [Promise.resolve(this.toResult(vertex, edge, state))]
     }
 
@@ -102,6 +108,14 @@ export abstract class View<T> {
         return {result: v, label: edge.label, state: newState, view: newState.view}
     }
 
+    protected pinnedVersion(edge: Edge & {feed: Buffer}) : number | undefined{
+        if(edge.restrictions) {
+            const feed = edge.feed.toString('hex')
+            const rules = new QueryRule<T>(<Vertex<T>><unknown>undefined, edge.restrictions)
+            return QueryState.minVersion<T>([rules], feed)
+        }
+    }
+
     
 }
 
@@ -123,11 +137,7 @@ export class StaticView<T> extends View<T> {
 
     // ignores other views in metadata
     public async get(edge: Edge & {feed: Buffer}, state: QueryState<T>): Promise<QueryResult<T>> {
-        const feed = edge.feed.toString('hex')
-
-        const tr = await this.getTransaction(feed, undefined)
-        const vertex = await this.db.getInTransaction<T>(edge.ref, this.codec, tr, feed)
-            .catch(err => {throw new VertexLoadingError(err, <string>feed, edge.ref, edge.version)})
+        const vertex = await this.getVertex(edge, state)
         return [Promise.resolve(this.toResult(vertex, edge, state))]
     }
 

@@ -28,19 +28,37 @@ export class QueryRule<T> {
         }
         return true
     }
+
+    restrictsVersion(feed: string) {
+        return minVersion(this.restrictions.map(r => r.restrictsVersion(feed) || 0))
+    }
 }
 
 export class QueryRestriction {
     readonly rule: RegExp
+    readonly pinnedVersion?: number
+    readonly pinnedFeed?: string
     readonly except?: QueryRestriction
 
     constructor(restriction: Restriction) {
-        this.rule = makeRe(restriction.rule, {nobrace: true, dot: true, noext: true, nocomment: true})
+        const firstSlash = restriction.rule.indexOf('/')
+        const feedRule = restriction.rule.slice(0, firstSlash)
+        const path = restriction.rule.slice(firstSlash)
+        const [feed, versionStr] = feedRule.split('#')
+        const rule = feed + path
+        this.pinnedVersion = parseInt(versionStr)
+        this.pinnedFeed = /[0-9a-f]+/.test(feed) ? feed : undefined
+        this.rule = makeRe(rule, {nobrace: true, dot: true, noext: true, nocomment: true})
+
         if(restriction.except) this.except = new QueryRestriction(restriction.except)
     }
 
     allows(path: string) {
         return this.rule.test(path) || (this.except && this.except.allows(path))
+    }
+
+    restrictsVersion(feed: string) {
+        if(this.pinnedFeed === feed && this.pinnedVersion) return this.pinnedVersion
     }
 }
 
@@ -59,6 +77,20 @@ export class QueryStateT<V, T extends IVertex<V>> {
     mergeStates(value?: T, path?: QueryPath<V>, rules?: QueryRule<V>[], view?: View<V>) {
         return new QueryStateT<V, T>(value || this.value, path || this.path, rules || this.rules, view || this.view)
     }
+
+    restrictsVersion(feed: string) {
+        return minVersion(this.rules?.map(r => r.restrictsVersion(feed) || 0))  
+    }
+
+    static minVersion<V>(restrictions: QueryRule<V>[], feed: string) {
+        return minVersion(restrictions.map(r => r.restrictsVersion(feed) || 0))  
+    }
 }
 
 export class QueryState<T> extends QueryStateT<T, IVertex<T>> {}
+
+function minVersion(arr: number[]) {
+    if(! Array.isArray(arr) || arr.length === 0) return undefined
+    const filtered = arr.filter(v => typeof v === 'number' && v > 0 && isFinite(v))
+    if(filtered.length > 0) return Math.min(... filtered)
+}
