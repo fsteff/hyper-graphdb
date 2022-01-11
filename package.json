@@ -29,7 +29,6 @@
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
     "hyperobjects": "^0.3.0",
-    "i": "^0.3.7",
     "is-loopback-addr": "^1.0.1",
     "minimatch": "^3.0.4",
     "npm": "^8.3.0",
