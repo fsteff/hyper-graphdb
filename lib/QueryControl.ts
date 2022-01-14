@@ -22,7 +22,7 @@ export class QueryRule<T> {
             path = path.slice(1)
         }
         const feedName = path.length > 0 ? path[path.length-1].feed : (<Vertex<T>>this.startingAt).getFeed()
-        const pathName = feedName + '/' + path.map(p => encodeURIComponent(p.label)).join('/')
+        const pathName = [feedName].concat(path.map(p => encodeURIComponent(p.label))).join('/')
         for(const restriction of this.restrictions) {
             if(! restriction.allows(pathName)) return false
         }
@@ -38,12 +38,14 @@ export class QueryRestriction {
     readonly rule: RegExp
     readonly pinnedVersion?: number
     readonly pinnedFeed?: string
+    readonly raw: string
     readonly except?: QueryRestriction
 
     constructor(restriction: Restriction) {
+        this.raw = restriction.rule
         const firstSlash = restriction.rule.indexOf('/')
-        const feedRule = restriction.rule.slice(0, firstSlash)
-        const path = restriction.rule.slice(firstSlash)
+        const feedRule = firstSlash >= 0 ? restriction.rule.slice(0, firstSlash) : restriction.rule
+        const path = firstSlash >= 0 ? restriction.rule.slice(firstSlash) : ''
         const [feed, versionStr] = feedRule.split('#')
         const rule = feed + path
         this.pinnedVersion = parseInt(versionStr)
@@ -54,7 +56,11 @@ export class QueryRestriction {
     }
 
     allows(path: string) {
-        return this.rule.test(path) || (this.except && this.except.allows(path))
+        const result = this.rule.test(path) || (this.except && this.except.allows(path))
+        if(!result) {
+            console.warn('QueryControl: path ' + path + ' is not allowed for rule ' + this.raw)
+        }
+        return result 
     }
 
     restrictsVersion(feed: string) {

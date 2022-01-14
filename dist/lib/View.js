@@ -44,7 +44,12 @@ class View {
                 .catch(err => { throw new Errors_1.VertexLoadingError(err, feed, edge.ref, edge.version); });
         }
         const vertex = await this.getVertex(edge, state);
-        return [Promise.resolve(this.toResult(vertex, edge, state))];
+        if (vertex) {
+            return [Promise.resolve(this.toResult(vertex, edge, state))];
+        }
+        else {
+            return [];
+        }
     }
     getView(name) {
         if (!name)
@@ -69,9 +74,9 @@ class View {
         const vertices = [];
         for (const edge of edges) {
             const feed = edge.feed || Buffer.from(vertex.getFeed(), 'hex');
-            const promise = this.get({ ...edge, feed }, state);
-            promise.catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
-            for (const res of await promise) {
+            const results = await this.get({ ...edge, feed }, state)
+                .catch(err => { var _a, _b; throw new Errors_1.EdgeTraversingError({ id: vertex.getId(), feed: vertex.getFeed() }, edge, new Error('key is ' + ((_b = (_a = edge.metadata) === null || _a === void 0 ? void 0 : _a['key']) === null || _b === void 0 ? void 0 : _b.toString('hex').substr(0, 2)) + '...')); });
+            for (const res of results) {
                 vertices.push(res);
             }
         }

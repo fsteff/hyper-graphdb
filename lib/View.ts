@@ -65,7 +65,11 @@ export abstract class View<T> {
         }
 
         const vertex = await this.getVertex(edge, state)
-        return [Promise.resolve(this.toResult(vertex, edge, state))]
+        if(vertex) {
+            return [Promise.resolve(this.toResult(vertex, edge, state))]
+        } else {
+            return []
+        }
     }
 
     protected getView(name?: string): View<T> {
@@ -91,9 +95,9 @@ export abstract class View<T> {
         const vertices: QueryResult<T> = []
         for(const edge of edges) {
             const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
-            const promise = this.get({...edge, feed}, state)
-            promise.catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
-            for(const res of await promise) {
+            const results = await this.get({...edge, feed}, state)
+                .catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
+            for(const res of results) {
                 vertices.push(res)
             }
         }
