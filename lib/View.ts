@@ -96,7 +96,7 @@ export abstract class View<T> {
         for(const edge of edges) {
             const feed =  edge.feed || Buffer.from(<string>vertex.getFeed(), 'hex')
             const results = await this.get({...edge, feed}, state)
-                .catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
+                .catch(err => {throw new EdgeTraversingError({id: vertex.getId(), feed: <string>vertex.getFeed()}, edge, err || new Error('key is ' + edge.metadata?.['key']?.toString('hex').substr(0,2) + '...'))})
             for(const res of results) {
                 vertices.push(res)
             }
