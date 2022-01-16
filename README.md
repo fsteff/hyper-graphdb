@@ -8,7 +8,7 @@ The query language is vaguely based on the gremlin query language, but technical
 ## Examples
 
 ```javascript
-const { HyperGraphDB, SimpleGraphObject, GraphObject } = require('hyper-graphdb')
+const { HyperGraphDB, SimpleGraphObject, GraphObject } = require('@certacrypt/hyper-graphdb')
 // for creating hypercore feeds an instance of Corestore or an object that implements its interface is required
 // the optional key parameter can be used to open an existing DB from any hypercore feed that contains such
 const db = new HyperGraphDB(corestore, key)
