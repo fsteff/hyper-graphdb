@@ -107,7 +107,7 @@ class Core {
                     }
                     core.once('peer-add', peer => resolve(undefined));
                 });
-                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('peer lookup timed out (5s) for feed ' + feed)), 5000));
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('peer lookup timed out (15s) for feed ' + feed)), 15000));
                 await Promise.race([connect, timeout])
                     .catch(err => console.error(err))
                     .then(() => created.feed.update(1))

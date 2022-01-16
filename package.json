@@ -1,6 +1,6 @@
 {
-  "name": "hyper-graphdb",
-  "version": "0.2.5",
+  "name": "@certacrypt/hyper-graphdb",
+  "version": "1.0.1",
   "description": "hypercore backed graph db",
   "main": "index.js",
   "scripts": {
@@ -28,18 +28,18 @@
     "@types/streamx": "^2.9.1",
     "codecs": "^2.2.0",
     "corestore": "^5.8.2",
-    "hyperobjects": "^0.3.0",
+    "hyperobjects": "^1.0.0",
     "is-loopback-addr": "^1.0.1",
     "minimatch": "^3.0.4",
-    "npm": "^8.3.0",
+    "npm": "^8.3.1",
     "protocol-buffers": "^4.2.0",
-    "streamx": "^2.10.1"
+    "streamx": "^2.12.0"
   },
   "devDependencies": {
     "@types/codecs": "^2.2.3",
     "copyfiles": "^2.4.1",
-    "hypercore": "^9.11.0",
-    "random-access-memory": "^3.1.2",
-    "tape": "^5.3.1"
+    "hypercore": "^9.12.0",
+    "random-access-memory": "^3.1.4",
+    "tape": "^5.4.1"
   }
 }
